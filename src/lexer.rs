@@ -12,6 +12,10 @@ impl Lexer {
             tokens: tokenize(input).rev().collect(),
         }
     }
+
+    pub fn peek(&self) -> Option<&Token> {
+        self.tokens.last()
+    }
 }
 
 impl Iterator for Lexer {
@@ -40,15 +44,6 @@ fn tokenize(input: &str) -> impl DoubleEndedIterator<Item = Token> {
     })
 }
 
-fn infix_binding_power(op: &Operator) -> (u32, u32) {
-    type Op = Operator;
-    match op {
-        Op::Add | Op::Sub => (10, 11),
-        Op::Div | Operator::Mul => (12, 13),
-        Op::Assign => (0, 1),
-    }
-}
-
 #[derive(Debug, Clone, Display)]
 pub enum Token {
     Keyword(Keyword),
@@ -71,7 +66,17 @@ pub enum Operator {
     Assign,
 }
 
-#[derive(Debug, Clone, EnumString)]
+impl Operator {
+    pub fn infix_binding_power(&self) -> (u32, u32) {
+        match self {
+            Self::Add | Self::Sub => (10, 11),
+            Self::Div | Self::Mul => (12, 13),
+            Self::Assign => (0, 1),
+        }
+    }
+}
+
+#[derive(Debug, Clone, EnumString, Display)]
 pub enum Keyword {
     Let,
 }

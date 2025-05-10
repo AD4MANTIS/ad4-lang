@@ -10,30 +10,41 @@ pub enum Expression {
 }
 
 impl Expression {
-    pub fn parse(lexer: &mut Lexer) -> Expression {
-        let lhs = match lexer.next().expect("expected Token") {
+    pub fn parse(lexer: &mut Lexer, binding_power_lhs: u32) -> Expression {
+        let mut expr = match lexer.next().expect("expected Token") {
             Token::Variable(v) => Self::Variable(v),
             Token::Literal(literal) => Self::Literal(literal),
-            Token::Keyword(keyword) => panic!("expected Expression, found Keyword"),
-            Token::Op(operator) => panic!("expected Expression, found Operator"),
+            Token::Keyword(keyword) => panic!("expected Expression, found Keyword '{}'", keyword),
+            Token::Op(operator) => panic!("expected Expression, found Operator '{}'", operator),
         };
 
-        let operator = match lexer.next() {
-            Some(Token::Op(operator)) => operator,
-            Some(_) => {
-                panic!("expected Operator")
-            }
-            None => {
-                return lhs;
-            }
-        };
+        loop {
+            let operator = match lexer.peek() {
+                Some(Token::Op(operator)) => operator.clone(),
+                Some(token) => {
+                    panic!("expected Operator, found '{}'", token)
+                }
+                None => {
+                    break;
+                }
+            };
 
-        Self::Operation(operator, [Box::new(lhs), Box::new(Self::parse(lexer))])
+            if binding_power_lhs >= operator.infix_binding_power().0 {
+                break;
+            }
+            lexer.next();
+
+            let rhs = Self::parse(lexer, operator.infix_binding_power().1);
+
+            expr = Self::Operation(operator, [Box::new(expr), Box::new(rhs)]);
+        }
+
+        expr
     }
 
     pub fn from_str(s: &str) -> Self {
         let mut lexer = Lexer::build(s);
-        Self::parse(&mut lexer)
+        Self::parse(&mut lexer, 0)
     }
 }
 

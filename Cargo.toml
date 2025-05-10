@@ -5,6 +5,7 @@ edition = "2024"
 
 [lints.clippy]
 pedantic = "warn"
+nursery = "warn"
 
 [dependencies]
 strum = { version = "0.27", features = ["derive"] }
