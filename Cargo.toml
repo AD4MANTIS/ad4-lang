@@ -7,3 +7,4 @@ edition = "2024"
 pedantic = "warn"
 
 [dependencies]
+strum = { version = "0.27", features = ["derive"] }
