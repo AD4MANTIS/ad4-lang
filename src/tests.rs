@@ -8,7 +8,7 @@ fn test_1() {
 
 #[test]
 fn test_2() {
-    let s = Expression::from_str("1 + 2 * 3");
+    let s = Expression::from_str("1+2 * 3");
     assert_eq!(s.to_string(), "(+ 1 (* 2 3))");
 }
 
@@ -20,7 +20,7 @@ fn test_3() {
 
 #[test]
 fn test_4() {
-    let s = Expression::from_str("a + b * 2 * c + a / 4");
+    let s = Expression::from_str("a + b * 2 * c + a/4");
     assert_eq!(s.to_string(), "(+ (+ a (* (* b 2) c)) (/ a 4))");
 }
 
@@ -32,13 +32,13 @@ fn test_5() {
 
 #[test]
 fn test_6() {
-    let s = Expression::from_str("( 2 + b ) * 5");
+    let s = Expression::from_str("(2 + b) * 5");
     assert_eq!(s.to_string(), "(* (+ 2 b) 5)");
 }
 
 #[test]
 fn test_7() {
-    let s = Expression::from_str("( ( ( a ) ) )");
+    let s = Expression::from_str("(( ( a )) )");
     assert_eq!(s.to_string(), "a");
 }
 
@@ -76,6 +76,6 @@ fn test_12() {
 
 #[test]
 fn test_13() {
-    let s = Expression::from_str("a . b . c . d");
+    let s = Expression::from_str("a.b.c.d");
     assert_eq!(s.to_string(), "(. (. (. a b) c) d)");
 }

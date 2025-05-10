@@ -28,7 +28,7 @@ impl Expression {
 
         loop {
             let operator = match lexer.peek() {
-                Some(Token::Op(operator)) => operator.clone(),
+                Some(Token::Op(operator)) => *operator,
                 Some(token) => {
                     panic!("expected Operator, found '{token}'")
                 }

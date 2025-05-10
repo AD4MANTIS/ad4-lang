@@ -1,18 +1,20 @@
 use std::fmt::Display;
 
-use strum::{Display, EnumString};
+use strum::{Display, EnumIter, EnumString, IntoEnumIterator, IntoStaticStr};
 
 pub struct Lexer {
     tokens: Vec<Token>,
 }
 
 impl Lexer {
+    #[must_use]
     pub fn build(input: &str) -> Self {
-        Self {
-            tokens: tokenize(input).rev().collect(),
-        }
+        let mut tokens: Vec<_> = tokenize(input).collect();
+        tokens.reverse();
+        Self { tokens }
     }
 
+    #[must_use]
     pub fn peek(&self) -> Option<&Token> {
         self.tokens.last()
     }
@@ -26,22 +28,33 @@ impl Iterator for Lexer {
     }
 }
 
-fn tokenize(input: &str) -> impl DoubleEndedIterator<Item = Token> {
-    input.split_whitespace().map(|token| {
-        if let Ok(keyword) = Keyword::try_from(token) {
-            return Token::Keyword(keyword);
-        }
+fn tokenize(input: &str) -> impl Iterator<Item = Token> {
+    input
+        .split_whitespace()
+        .flat_map(|token| -> Box<dyn Iterator<Item = Token>> {
+            if let Ok(keyword) = Keyword::try_from(token) {
+                return Box::new(std::iter::once(Token::Keyword(keyword)));
+            }
 
-        if let Ok(operator) = Operator::try_from(token) {
-            return Token::Op(operator);
-        }
+            for operator in Operator::iter() {
+                let operator_str: &str = operator.into();
+                let Some(op_pos) = token.find(operator_str) else {
+                    continue;
+                };
 
-        if let Ok(literal) = Literal::try_from(token) {
-            return Token::Literal(literal);
-        }
+                return Box::new(
+                    tokenize(&token[0..op_pos])
+                        .chain([Token::Op(operator)])
+                        .chain(tokenize(&token[(op_pos + operator_str.len())..])),
+                );
+            }
 
-        Token::Variable(token.to_string())
-    })
+            if let Ok(literal) = Literal::try_from(token) {
+                return Box::new(std::iter::once(Token::Literal(literal)));
+            }
+
+            Box::new(std::iter::once(Token::Variable(token.to_string())))
+        })
 }
 
 #[derive(Debug, Clone, Display)]
@@ -52,7 +65,7 @@ pub enum Token {
     Variable(String),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, EnumString, Display)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoStaticStr, EnumIter, Display)]
 pub enum Operator {
     #[strum(serialize = "+")]
     Add,
