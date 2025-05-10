@@ -68,6 +68,8 @@ pub enum Operator {
     OpeningBracket,
     #[strum(serialize = ")")]
     ClosingBracket,
+    #[strum(serialize = ".")]
+    Dot,
 }
 
 impl Operator {
@@ -79,6 +81,7 @@ impl Operator {
             Self::Assign => (2, 1),
             Self::OpeningBracket => (0, 1),
             Self::ClosingBracket => (0, 0),
+            Self::Dot => (0, 21),
         }
     }
 }

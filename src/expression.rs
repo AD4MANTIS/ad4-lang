@@ -38,7 +38,7 @@ impl Expression {
             };
 
             let infix_binding_power = operator.infix_binding_power();
-            if infix_binding_power.0 <= binding_power_lhs {
+            if infix_binding_power.0 < binding_power_lhs {
                 break;
             }
             lexer.next();

@@ -50,37 +50,32 @@ fn test_8() {
 
 /*
 #[test]
-fn test_9(){
+fn test_9() {
     let s = Expression::from_str("a + b * c ^ 4");
-    println!("{}", s.to_string());
     assert_eq!(s.to_string(), "(+ a (* b (^ c 4)))");
 }
 
 #[test]
-fn test_10(){
+fn test_10() {
     let s = Expression::from_str("a + 2 √ 4 * b");
-    println!("{}", s.to_string());
     assert_eq!(s.to_string(), "(+ a (* (√ 2 4) b))");
 }
 
 #[test]
-fn test_11(){
+fn test_11() {
     let s = Expression::from_str("a + 2 √ (4 * b)");
-    println!("{}", s.to_string());
     assert_eq!(s.to_string(), "(+ a (√ 2 (* 4 b)))");
 }
 
 #[test]
-fn test_12(){
+fn test_12() {
     let s = Expression::from_str("a ^ b ^ 2");
-    println!("{}", s.to_string());
     assert_eq!(s.to_string(), "(^ a (^ b 2))");
 }
-
+*/
 
 #[test]
-fn test_13(){
-    let s = Expression::from_str("a.b.c.d");
-    println!("{}", s.to_string());
+fn test_13() {
+    let s = Expression::from_str("a . b . c . d");
     assert_eq!(s.to_string(), "(. (. (. a b) c) d)");
-}*/
+}

@@ -11,7 +11,10 @@ mod lexer;
 mod tests;
 
 #[derive(Debug, Clone)]
-enum Statement {}
+enum Statement {
+    Declaration(Variable, Expression),
+    Assign(Variable, Expression),
+}
 
 #[derive(Debug, Clone)]
 enum Variable {
@@ -36,6 +39,8 @@ fn main() {
             break;
         }
 
-        let lexer = Lexer::build(&input);
+        let mut lexer = Lexer::build(&input);
+        let expr = Expression::parse(&mut lexer, 0);
+        println!("{expr}");
     }
 }
