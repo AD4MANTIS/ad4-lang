@@ -23,7 +23,7 @@ enum Variable {
 
 fn main() {
     println!("Hello, world!");
-    let mut variables = HashMap::<String, Variable>::new();
+    let variables = HashMap::<String, Variable>::new();
 
     let mut input = String::new();
     loop {

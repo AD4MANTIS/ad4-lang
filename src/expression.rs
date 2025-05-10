@@ -10,19 +10,19 @@ pub enum Expression {
 }
 
 impl Expression {
-    pub fn parse(lexer: &mut Lexer, binding_power_lhs: u32) -> Expression {
+    pub fn parse(lexer: &mut Lexer, binding_power_lhs: u32) -> Self {
         let mut expr = match lexer.next().expect("expected Token") {
             Token::Variable(v) => Self::Variable(v),
             Token::Literal(literal) => Self::Literal(literal),
-            Token::Keyword(keyword) => panic!("expected Expression, found Keyword '{}'", keyword),
-            Token::Op(operator) => panic!("expected Expression, found Operator '{}'", operator),
+            Token::Keyword(keyword) => panic!("expected Expression, found Keyword '{keyword}'"),
+            Token::Op(operator) => panic!("expected Expression, found Operator '{operator}'"),
         };
 
         loop {
             let operator = match lexer.peek() {
                 Some(Token::Op(operator)) => operator.clone(),
                 Some(token) => {
-                    panic!("expected Operator, found '{}'", token)
+                    panic!("expected Operator, found '{token}'")
                 }
                 None => {
                     break;
@@ -42,6 +42,7 @@ impl Expression {
         expr
     }
 
+    #[must_use]
     pub fn from_str(s: &str) -> Self {
         let mut lexer = Lexer::build(s);
         Self::parse(&mut lexer, 0)
@@ -53,7 +54,7 @@ impl Display for Expression {
         match self {
             Self::Literal(literal) => literal.fmt(f),
             Self::Variable(var) => var.fmt(f),
-            Expression::Operation(operator, expressions) => f.write_fmt(format_args!(
+            Self::Operation(operator, expressions) => f.write_fmt(format_args!(
                 "({operator} {} {})",
                 expressions[0], expressions[1]
             )),

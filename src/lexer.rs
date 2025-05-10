@@ -7,7 +7,7 @@ pub struct Lexer {
 }
 
 impl Lexer {
-    pub fn build(input: &str) -> Lexer {
+    pub fn build(input: &str) -> Self {
         Self {
             tokens: tokenize(input).rev().collect(),
         }
@@ -67,7 +67,7 @@ pub enum Operator {
 }
 
 impl Operator {
-    pub fn infix_binding_power(&self) -> (u32, u32) {
+    pub const fn infix_binding_power(&self) -> (u32, u32) {
         match self {
             Self::Add | Self::Sub => (10, 11),
             Self::Div | Self::Mul => (12, 13),
