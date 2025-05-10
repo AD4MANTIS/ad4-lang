@@ -52,7 +52,7 @@ pub enum Token {
     Variable(String),
 }
 
-#[derive(Debug, Clone, EnumString, Display)]
+#[derive(Debug, Clone, PartialEq, Eq, EnumString, Display)]
 pub enum Operator {
     #[strum(serialize = "+")]
     Add,
@@ -64,14 +64,21 @@ pub enum Operator {
     Div,
     #[strum(serialize = "=")]
     Assign,
+    #[strum(serialize = "(")]
+    OpeningBracket,
+    #[strum(serialize = ")")]
+    ClosingBracket,
 }
 
 impl Operator {
+    #[must_use]
     pub const fn infix_binding_power(&self) -> (u32, u32) {
         match self {
             Self::Add | Self::Sub => (10, 11),
             Self::Div | Self::Mul => (12, 13),
-            Self::Assign => (0, 1),
+            Self::Assign => (2, 1),
+            Self::OpeningBracket => (0, 1),
+            Self::ClosingBracket => (0, 0),
         }
     }
 }

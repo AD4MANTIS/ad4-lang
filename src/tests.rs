@@ -26,30 +26,29 @@ fn test_4() {
 
 #[test]
 fn test_5() {
-    let s = Expression::from_str("2 + b * 5 - 3 / 5 + 5 -3");
+    let s = Expression::from_str("2 + b * 5 - 3 / 5 + 5 - 3");
     assert_eq!(s.to_string(), "(- (+ (- (+ 2 (* b 5)) (/ 3 5)) 5) 3)");
 }
 
 #[test]
 fn test_6() {
-    let s = Expression::from_str("(2 + b) * 5 ");
+    let s = Expression::from_str("( 2 + b ) * 5");
     assert_eq!(s.to_string(), "(* (+ 2 b) 5)");
 }
 
 #[test]
 fn test_7() {
-    let s = Expression::from_str("(((a)))");
+    let s = Expression::from_str("( ( ( a ) ) )");
     assert_eq!(s.to_string(), "a");
 }
 
-/*
 #[test]
-fn test_8(){
-    let s = Expression::from_str("a + b * 2 * (c + a) / 4");
+fn test_8() {
+    let s = Expression::from_str("a + b * 2 * ( c + a ) / 4");
     assert_eq!(s.to_string(), "(+ a (/ (* (* b 2) (+ c a)) 4))");
 }
 
-
+/*
 #[test]
 fn test_9(){
     let s = Expression::from_str("a + b * c ^ 4");

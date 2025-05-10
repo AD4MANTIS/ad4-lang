@@ -15,6 +15,14 @@ impl Expression {
             Token::Variable(v) => Self::Variable(v),
             Token::Literal(literal) => Self::Literal(literal),
             Token::Keyword(keyword) => panic!("expected Expression, found Keyword '{keyword}'"),
+            Token::Op(bracket @ Operator::OpeningBracket) => {
+                let expr = Self::parse(lexer, bracket.infix_binding_power().1);
+                assert!(matches!(
+                    lexer.next(),
+                    Some(Token::Op(Operator::ClosingBracket))
+                ));
+                expr
+            }
             Token::Op(operator) => panic!("expected Expression, found Operator '{operator}'"),
         };
 
@@ -29,12 +37,13 @@ impl Expression {
                 }
             };
 
-            if binding_power_lhs >= operator.infix_binding_power().0 {
+            let infix_binding_power = operator.infix_binding_power();
+            if infix_binding_power.0 <= binding_power_lhs {
                 break;
             }
             lexer.next();
 
-            let rhs = Self::parse(lexer, operator.infix_binding_power().1);
+            let rhs = Self::parse(lexer, infix_binding_power.1);
 
             expr = Self::Operation(operator, [Box::new(expr), Box::new(rhs)]);
         }
