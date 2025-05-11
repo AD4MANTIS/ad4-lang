@@ -4,29 +4,23 @@ use std::{
     collections::HashMap,
     io::{Write, stdin, stdout},
 };
+pub use value::*;
 
 mod expression;
 mod lexer;
 #[cfg(test)]
 mod tests;
+mod value;
 
 #[derive(Debug, Clone)]
 enum Statement {
-    Declaration(Variable, Expression),
-    Assign(Variable, Expression),
-}
-
-#[derive(Debug, Clone)]
-enum Variable {
-    String(String),
-    I64(i64),
-    U64(u64),
-    Float(f32),
+    Declaration(String, Expression),
+    Assign(String, Expression),
 }
 
 fn main() {
     println!("Hello, world!");
-    let variables = HashMap::<String, Variable>::new();
+    let variables = HashMap::<String, Value>::new();
 
     let mut input = String::new();
     loop {
@@ -41,6 +35,6 @@ fn main() {
 
         let mut lexer = Lexer::build(&input);
         let expr = Expression::parse(&mut lexer, 0);
-        println!("{expr}");
+        println!("{:?}", expr.eval(&variables).unwrap());
     }
 }
