@@ -115,18 +115,21 @@ impl TryFrom<&str> for Literal {
     type Error = ();
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        value
-            .chars()
-            .next()
-            .and_then(|val| {
-                Some(match val {
-                    '0'..='9' => Self::Number(value.to_string()),
-                    '\'' => Self::Char(value.to_string()),
-                    '\"' => Self::String(value.to_string()),
-                    _ => return None,
-                })
-            })
-            .ok_or(())
+        let val = match value.len() {
+            0 => [' ', ' '],
+            1 => [value.chars().nth(0).expect("Length is 1"), ' '],
+            2.. => [
+                value.chars().nth(0).expect("Length is at least 2"),
+                value.chars().nth(1).expect("Length is at least 2"),
+            ],
+        };
+
+        Ok(match val {
+            ['0'..='9', ..] | ['+' | '-', '0'..='9'] => Self::Number(value.to_string()),
+            ['\'', ..] => Self::Char(value.to_string()),
+            ['\"', ..] => Self::String(value.to_string()),
+            _ => return Err(()),
+        })
     }
 }
 

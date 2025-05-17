@@ -19,6 +19,12 @@ pub enum EvalError {
     ParseInt(#[from] std::num::ParseIntError),
 }
 
+impl From<&'static str> for EvalError {
+    fn from(value: &'static str) -> Self {
+        Self::Static(value)
+    }
+}
+
 impl Expression {
     pub fn parse(lexer: &mut Lexer, binding_power_lhs: u32) -> Self {
         let mut expr = match lexer.next().expect("expected Token") {
@@ -77,7 +83,7 @@ impl Expression {
                 Literal::String(s) => Ok(s.clone().into()),
                 Literal::Number(n) => {
                     if n.contains('.') {
-                        n.parse().map(Value::Float).map_err(EvalError::from)
+                        n.parse().map(Value::F32).map_err(EvalError::from)
                     } else if n.ends_with('u') {
                         n[0..n.len() - 1]
                             .parse()
@@ -106,10 +112,10 @@ impl Expression {
                 let rhs = expressions[1].eval(variables)?;
 
                 match operator {
-                    Operator::Add => (lhs + &rhs).ok_or(EvalError::Static("invalid operation")),
-                    Operator::Sub => todo!(),
-                    Operator::Mul => todo!(),
-                    Operator::Div => todo!(),
+                    Operator::Add => (lhs + &rhs).map_err(EvalError::from),
+                    Operator::Sub => (lhs - &rhs).map_err(EvalError::from),
+                    Operator::Mul => (lhs * &rhs).map_err(EvalError::from),
+                    Operator::Div => (lhs / &rhs).map_err(EvalError::from),
                     Operator::Assign => todo!(),
                     Operator::OpeningBracket => todo!(),
                     Operator::ClosingBracket => todo!(),
@@ -130,5 +136,49 @@ impl Display for Expression {
                 expressions[0], expressions[1]
             )),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    fn expr(input: &str, expected: &str) {
+        let s = Expression::from_str(input);
+        assert_eq!(s.to_string(), expected, "Input: {input}");
+    }
+
+    macro_rules! expr_cases {
+        ($($name:ident: $input:expr => $expected:expr),* $(,)?) => {
+            $(
+                #[test]
+                fn $name() {
+                    expr($input, $expected);
+                }
+            )*
+        };
+    }
+
+    expr_cases! {
+        literal_number: "1" => "1",
+        precedence_mul_before_add: "1+2 * 3" => "(+ 1 (* 2 3))",
+        left_associative_mul: "a * 2 * b" => "(* (* a 2) b)",
+        mixed_precedence_and_div: "a + b * 2 * c + a/4" => "(+ (+ a (* (* b 2) c)) (/ a 4))",
+        complex_chain: "2 + b * 5 - 3 / 5 + 5 - 3" => "(- (+ (- (+ 2 (* b 5)) (/ 3 5)) 5) 3)",
+        parens_affect_precedence: "(2 + b) * 5" => "(* (+ 2 b) 5)",
+        nested_parens: "(( ( a )) )" => "a",
+        parens_with_mul_and_add: "a + b * 2 * ( c + a ) / 4" => "(+ a (/ (* (* b 2) (+ c a)) 4))",
+        variable_x: "x" => "x",
+        add_two_vars: "x + y" => "(+ x y)",
+        mul_then_add: "x * y + z" => "(+ (* x y) z)",
+        dot_operator: "a.b" => "(. a b)",
+        chained_dot: "a.b.c.d" => "(. (. (. a b) c) d)",
+        left_associative_add: "1 + 2 + 3" => "(+ (+ 1 2) 3)",
+        left_associative_mul_numbers: "1 * 2 * 3" => "(* (* 1 2) 3)",
+        parens_around_number: "((1))" => "1",
+        add_with_parens_right: "a + (b + c)" => "(+ a (+ b c))",
+        mul_with_parens_both: "(a + b) * (c + d)" => "(* (+ a b) (+ c d))",
+        div_then_mul: "a / b * c" => "(* (/ a b) c)",
+        long_add_chain: "a + b + c + d" => "(+ (+ (+ a b) c) d)",
     }
 }

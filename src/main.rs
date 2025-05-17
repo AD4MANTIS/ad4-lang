@@ -8,8 +8,6 @@ pub use value::*;
 
 mod expression;
 mod lexer;
-#[cfg(test)]
-mod tests;
 mod value;
 
 #[derive(Debug, Clone)]

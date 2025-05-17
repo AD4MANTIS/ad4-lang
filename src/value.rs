@@ -1,4 +1,4 @@
-use std::ops::Add;
+use std::ops::{Add, Div, Mul, Sub};
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -6,46 +6,56 @@ pub enum Value {
     Char(char),
     I64(i64),
     U64(u64),
-    Float(f32),
+    F32(f32),
 }
 
-impl From<String> for Value {
-    fn from(value: String) -> Self {
-        Self::String(value)
-    }
-}
-impl From<char> for Value {
-    fn from(value: char) -> Self {
-        Self::Char(value)
-    }
-}
-impl From<i64> for Value {
-    fn from(value: i64) -> Self {
-        Self::I64(value)
-    }
-}
-impl From<u64> for Value {
-    fn from(value: u64) -> Self {
-        Self::U64(value)
-    }
-}
-impl From<f32> for Value {
-    fn from(value: f32) -> Self {
-        Self::Float(value)
-    }
+macro_rules! FromValue {
+    ($type:ty, $field:ident) => {
+        impl From<$type> for Value {
+            fn from(value: $type) -> Self {
+                Self::$field(value)
+            }
+        }
+    };
 }
 
-impl Add<&Self> for Value {
-    type Output = Option<Self>;
+FromValue!(String, String);
+FromValue!(char, Char);
+FromValue!(i64, I64);
+FromValue!(u64, U64);
+FromValue!(f32, F32);
 
-    fn add(self, rhs: &Self) -> Self::Output {
-        Some(match (self, rhs) {
-            (Self::String(a), Self::String(b)) => (a + b).into(),
-            (Self::Char(a), Self::Char(b)) => (a.to_string() + &b.to_string()).into(),
-            (Self::I64(a), Self::I64(b)) => (a + b).into(),
-            (Self::U64(a), Self::U64(b)) => (a + b).into(),
-            (Self::Float(a), Self::Float(b)) => (a + b).into(),
-            _ => return None,
-        })
-    }
+macro_rules! Op {
+    ($trait:ty: $fn_name:ident $op:tt { $($field:ident),+ $(& $($rest:tt)+)? }) => {
+        impl $trait for Value {
+            type Output = ValueOperationResult<Self>;
+
+            fn $fn_name (self, rhs: &Self) -> Self::Output {
+                Ok(match (self, rhs) {
+                    $(
+                        (Self::$field(lhs), Self::$field(rhs)) => (lhs $op rhs).into(),
+                    )+
+                    $($($rest)+ ,)?
+                    _ => return Err("invalid operation")
+                })
+            }
+        }
+    };
 }
+
+pub type ValueOperationResult<T> = Result<T, &'static str>;
+
+Op!(Add<&Self>: add + {
+    String,
+    I64,
+    U64,
+    F32 &
+    (Self::Char(a), Self::Char(b)) => (a.to_string() + &b.to_string()).into()
+});
+Op!(Sub<&Self>: sub - {
+    I64,
+    U64,
+    F32
+});
+Op!(Mul<&Self>: mul * { I64, U64, F32 });
+Op!(Div<&Self>: div / { I64, U64, F32 });
