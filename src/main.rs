@@ -10,13 +10,13 @@ mod expression;
 mod lexer;
 mod value;
 
-#[derive(Debug, Clone)]
-enum Statement {
-    Declaration(String, Expression),
-    Assign(String, Expression),
-}
+// #[derive(Debug, Clone)]
+// enum Statement {
+//     Declaration(String, Expression),
+//     Assign(String, Expression),
+// }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Hello, world!");
     let variables = HashMap::<String, Value>::new();
 
@@ -33,6 +33,8 @@ fn main() {
 
         let mut lexer = Lexer::build(&input);
         let expr = Expression::parse(&mut lexer, 0);
-        println!("{:?}", expr.eval(&variables).unwrap());
+        println!("{:?}", expr.eval(&variables)?);
     }
+
+    Ok(())
 }
