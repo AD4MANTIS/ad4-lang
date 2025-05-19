@@ -29,8 +29,38 @@ impl Iterator for Lexer {
 }
 
 fn tokenize(input: &str) -> impl Iterator<Item = Token> {
-    input
-        .split_whitespace()
+    let mut current_literal_start: Option<char> = None;
+
+    #[allow(
+        clippy::needless_collect,
+        reason = "Because the closure captures `current_literal_start` and we can't return a reference to this local variable"
+    )]
+    let split_input = input
+        .split(|char| match char {
+            '\'' | '"' => {
+                if let Some(current_start) = current_literal_start.take() {
+                    assert_eq!(
+                        current_start, char,
+                        "Expected matching closing delimiter {current_start}, found {char}"
+                    );
+                } else {
+                    current_literal_start = Some(char);
+                }
+                false
+            }
+            _ => char.is_whitespace() && current_literal_start.is_none(),
+        })
+        .filter(|char| !char.is_empty())
+        .collect::<Vec<_>>();
+
+    assert!(
+        current_literal_start.is_none(),
+        "Expected closing delimiter {}",
+        current_literal_start.unwrap_or_default()
+    );
+
+    split_input
+        .into_iter()
         .flat_map(|token| -> Box<dyn Iterator<Item = Token>> {
             if let Ok(keyword) = Keyword::try_from(token) {
                 return Box::new(std::iter::once(Token::Keyword(keyword)));
@@ -115,19 +145,10 @@ impl TryFrom<&str> for Literal {
     type Error = ();
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let val = match value.len() {
-            0 => [' ', ' '],
-            1 => [value.chars().nth(0).expect("Length is 1"), ' '],
-            2.. => [
-                value.chars().nth(0).expect("Length is at least 2"),
-                value.chars().nth(1).expect("Length is at least 2"),
-            ],
-        };
-
-        Ok(match val {
-            ['0'..='9', ..] | ['+' | '-', '0'..='9'] => Self::Number(value.to_string()),
-            ['\'', ..] => Self::Char(value.to_string()),
-            ['\"', ..] => Self::String(value.to_string()),
+        Ok(match value.chars().next().unwrap_or(' ') {
+            '0'..='9' => Self::Number(value.to_string()),
+            '\'' => Self::Char(value[1..value.len() - 1].to_string()),
+            '\"' => Self::String(value[1..value.len() - 1].to_string()),
             _ => return Err(()),
         })
     }

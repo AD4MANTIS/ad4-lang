@@ -168,6 +168,11 @@ mod test {
 
     expr_cases! {
         literal_number: "1" => "1",
+        literal_char: "'c'" => "c",
+        literal_char_whitespace: "' '" => " ",
+        literal_string: "\"Hi\"" => "Hi",
+        literal_string_with_spaces: "\"Hello, World!\"" => "Hello, World!",
+        negativ_literal_number: "-1" => "(- 0 1)",
         precedence_mul_before_add: "1+2 * 3" => "(+ 1 (* 2 3))",
         left_associative_mul: "a * 2 * b" => "(* (* a 2) b)",
         mixed_precedence_and_div: "a + b * 2 * c + a/4" => "(+ (+ a (* (* b 2) c)) (/ a 4))",
