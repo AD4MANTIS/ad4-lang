@@ -1,4 +1,7 @@
-use std::ops::{Add, Div, Mul, Sub};
+use std::{
+    fmt::Display,
+    ops::{Add, Div, Mul, Sub},
+};
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -7,6 +10,18 @@ pub enum Value {
     I64(i64),
     U64(u64),
     F32(f32),
+}
+
+impl Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::String(s) => write!(f, "{}", s),
+            Self::Char(c) => write!(f, "{}", c),
+            Self::I64(i) => write!(f, "{}", i),
+            Self::U64(u) => write!(f, "{}", u),
+            Self::F32(f32) => write!(f, "{}", f32),
+        }
+    }
 }
 
 macro_rules! FromValue {

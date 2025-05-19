@@ -2,6 +2,8 @@ use std::fmt::Display;
 
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator, IntoStaticStr};
 
+use crate::Value;
+
 pub struct Lexer {
     tokens: Vec<Token>,
 }
@@ -26,6 +28,16 @@ impl Iterator for Lexer {
     fn next(&mut self) -> Option<Self::Item> {
         self.tokens.pop()
     }
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum TokenError {
+    #[error(transparent)]
+    ParseFloat(#[from] std::num::ParseFloatError),
+    #[error(transparent)]
+    ParseInt(#[from] std::num::ParseIntError),
+    #[error("chars must contain exactly one character")]
+    InvalidCharLength,
 }
 
 fn tokenize(input: &str) -> impl Iterator<Item = Token> {
@@ -79,8 +91,8 @@ fn tokenize(input: &str) -> impl Iterator<Item = Token> {
                 );
             }
 
-            if let Ok(literal) = Literal::try_from(token) {
-                return Box::new(std::iter::once(Token::Literal(literal)));
+            if let Some(literal) = try_parse_literal(token) {
+                return Box::new(std::iter::once(Token::Literal(literal.unwrap())));
             }
 
             Box::new(std::iter::once(Token::Variable(token.to_string())))
@@ -135,29 +147,41 @@ pub enum Keyword {
 }
 
 #[derive(Debug, Clone)]
-pub enum Literal {
-    String(String),
-    Number(String),
-    Char(String),
-}
+pub struct Literal(pub Value);
 
-impl TryFrom<&str> for Literal {
-    type Error = ();
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Ok(match value.chars().next().unwrap_or(' ') {
-            '0'..='9' => Self::Number(value.to_string()),
-            '\'' => Self::Char(value[1..value.len() - 1].to_string()),
-            '\"' => Self::String(value[1..value.len() - 1].to_string()),
-            _ => return Err(()),
-        })
-    }
+fn try_parse_literal(value: &str) -> Option<Result<Literal, TokenError>> {
+    Some(
+        match value.chars().next().unwrap_or(' ') {
+            '0'..='9' => {
+                let n = value;
+                if n.contains('.') {
+                    n.parse().map(Value::F32).map_err(TokenError::from)
+                } else if n.ends_with('u') {
+                    n[0..n.len() - 1]
+                        .parse()
+                        .map(Value::U64)
+                        .map_err(TokenError::from)
+                } else {
+                    n.trim_end_matches('i')
+                        .parse()
+                        .map(Value::I64)
+                        .map_err(TokenError::from)
+                }
+            }
+            '\'' => value
+                .chars()
+                .nth(1)
+                .map(Value::Char)
+                .ok_or(TokenError::InvalidCharLength),
+            '\"' => Ok(Value::String(value[1..value.len() - 1].to_string())),
+            _ => return None,
+        }
+        .map(Literal),
+    )
 }
 
 impl Display for Literal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self {
-            Self::String(s) | Self::Number(s) | Self::Char(s) => s,
-        })
+        write!(f, "{}", self.0)
     }
 }
