@@ -39,6 +39,13 @@ impl Expression {
                 ));
                 expr
             }
+            Token::Op(operator @ (Operator::Add | Operator::Sub)) => Self::Operation(
+                operator,
+                [
+                    Box::new(Self::Literal(Literal::Number("0".to_string()))),
+                    Box::new(Self::parse(lexer, operator.infix_binding_power().1)),
+                ],
+            ),
             Token::Op(operator) => panic!("expected Expression, found Operator '{operator}'"),
         };
 
