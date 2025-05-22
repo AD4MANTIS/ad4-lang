@@ -15,17 +15,17 @@ pub enum Value {
 impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::String(s) => write!(f, "{}", s),
-            Self::Char(c) => write!(f, "{}", c),
-            Self::I64(i) => write!(f, "{}", i),
-            Self::U64(u) => write!(f, "{}", u),
-            Self::F32(f32) => write!(f, "{}", f32),
+            Self::String(s) => write!(f, "{s}"),
+            Self::Char(c) => write!(f, "{c}"),
+            Self::I64(i) => write!(f, "{i}"),
+            Self::U64(u) => write!(f, "{u}"),
+            Self::F32(f32) => write!(f, "{f32}"),
         }
     }
 }
 
 macro_rules! FromValue {
-    ($type:ty, $field:ident) => {
+    ($type:ty => $field:ident) => {
         impl From<$type> for Value {
             fn from(value: $type) -> Self {
                 Self::$field(value)
@@ -34,11 +34,11 @@ macro_rules! FromValue {
     };
 }
 
-FromValue!(String, String);
-FromValue!(char, Char);
-FromValue!(i64, I64);
-FromValue!(u64, U64);
-FromValue!(f32, F32);
+FromValue!(String => String);
+FromValue!(char => Char);
+FromValue!(i64 => I64);
+FromValue!(u64 => U64);
+FromValue!(f32 => F32);
 
 macro_rules! Op {
     ($trait:ty: $fn_name:ident $op:tt { $($field:ident),+ $(& $($rest:tt)+)? }) => {
@@ -67,10 +67,6 @@ Op!(Add<&Self>: add + {
     F32 &
     (Self::Char(a), Self::Char(b)) => (a.to_string() + &b.to_string()).into()
 });
-Op!(Sub<&Self>: sub - {
-    I64,
-    U64,
-    F32
-});
+Op!(Sub<&Self>: sub - { I64, U64, F32 });
 Op!(Mul<&Self>: mul * { I64, U64, F32 });
 Op!(Div<&Self>: div / { I64, U64, F32 });

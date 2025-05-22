@@ -125,23 +125,32 @@ mod test {
     }
 
     macro_rules! expr_cases {
-        ($($name:ident: $input:expr => $expected:expr),* $(,)?) => {
-            $(
-                #[test]
-                fn $name() {
-                    expr($input, $expected);
-                }
-            )*
+        ($mod_name:ident $($name:ident: $input:expr => $expected:expr),* ,) => {
+            mod $mod_name {
+                use super::*;
+
+                $(
+                    #[test]
+                    fn $name() {
+                        expr($input, $expected);
+                    }
+                )*
+            }
         };
     }
 
-    expr_cases! {
-        literal_number: "1" => "1",
-        literal_char: "'c'" => "c",
-        literal_char_whitespace: "' '" => " ",
-        literal_string: "\"Hi\"" => "Hi",
-        literal_string_with_spaces: "\"Hello, World!\"" => "Hello, World!",
-        negativ_literal_number: "-1" => "(- 0 1)",
+    expr_cases! { literals
+        number: "1" => "1",
+        char: "'c'" => "c",
+        char_whitespace: "' '" => " ",
+        string: "\"Hi\"" => "Hi",
+        string_with_spaces: "\"Hello, World!\"" => "Hello, World!",
+        negativ_number: "-1" => "(- 0 1)",
+        signed_number: "12i" => "12",
+        unsigned_number: "123u" => "123",
+    }
+
+    expr_cases! { math
         precedence_mul_before_add: "1+2 * 3" => "(+ 1 (* 2 3))",
         left_associative_mul: "a * 2 * b" => "(* (* a 2) b)",
         mixed_precedence_and_div: "a + b * 2 * c + a/4" => "(+ (+ a (* (* b 2) c)) (/ a 4))",
@@ -149,11 +158,12 @@ mod test {
         parens_affect_precedence: "(2 + b) * 5" => "(* (+ 2 b) 5)",
         nested_parens: "(( ( a )) )" => "a",
         parens_with_mul_and_add: "a + b * 2 * ( c + a ) / 4" => "(+ a (/ (* (* b 2) (+ c a)) 4))",
+    }
+
+    expr_cases! { variables
         variable_x: "x" => "x",
         add_two_vars: "x + y" => "(+ x y)",
         mul_then_add: "x * y + z" => "(+ (* x y) z)",
-        dot_operator: "a.b" => "(. a b)",
-        chained_dot: "a.b.c.d" => "(. (. (. a b) c) d)",
         left_associative_add: "1 + 2 + 3" => "(+ (+ 1 2) 3)",
         left_associative_mul_numbers: "1 * 2 * 3" => "(* (* 1 2) 3)",
         parens_around_number: "((1))" => "1",
@@ -161,5 +171,11 @@ mod test {
         mul_with_parens_both: "(a + b) * (c + d)" => "(* (+ a b) (+ c d))",
         div_then_mul: "a / b * c" => "(* (/ a b) c)",
         long_add_chain: "a + b + c + d" => "(+ (+ (+ a b) c) d)",
+    }
+
+    expr_cases! { dot
+        dot_operator: "a.b" => "(. a b)",
+        chained_dot: "a.b.c.d" => "(. (. (. a b) c) d)",
+        spaced_dots: "a . b. c" => "(. (. a b) c)",
     }
 }
