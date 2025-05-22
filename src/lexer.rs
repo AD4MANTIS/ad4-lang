@@ -78,25 +78,37 @@ fn tokenize(input: &str) -> impl Iterator<Item = Token> {
                 return Box::new(std::iter::once(Token::Keyword(keyword)));
             }
 
-            for operator in Operator::iter() {
-                let operator_str: &str = operator.into();
-                let Some(op_pos) = token.find(operator_str) else {
-                    continue;
-                };
-
-                return Box::new(
-                    tokenize(&token[0..op_pos])
-                        .chain([Token::Op(operator)])
-                        .chain(tokenize(&token[(op_pos + operator_str.len())..])),
-                );
+            if let Some(x) = Operator::iter()
+                .filter(|op| *op != Operator::Dot)
+                .find_map(|op| tokenize_operator(token, op))
+            {
+                return x;
             }
 
             if let Some(literal) = try_parse_literal(token) {
                 return Box::new(std::iter::once(Token::Literal(literal.unwrap())));
             }
 
+            if let Some(x) = tokenize_operator(token, Operator::Dot) {
+                return x;
+            }
+
             Box::new(std::iter::once(Token::Variable(token.to_string())))
         })
+}
+
+fn tokenize_operator(
+    token: &str,
+    operator: Operator,
+) -> Option<Box<dyn Iterator<Item = Token> + '_>> {
+    let operator_str: &str = operator.into();
+    let op_pos = token.find(operator_str)?;
+
+    Some(Box::new(
+        tokenize(&token[..op_pos])
+            .chain([Token::Op(operator)])
+            .chain(tokenize(&token[(op_pos + operator_str.len())..])),
+    ))
 }
 
 #[derive(Debug, Clone, Display)]
@@ -117,6 +129,8 @@ pub enum Operator {
     Mul,
     #[strum(serialize = "/")]
     Div,
+    #[strum(serialize = "==")]
+    Eq,
     #[strum(serialize = "=")]
     Assign,
     #[strum(serialize = "(")]
@@ -135,8 +149,8 @@ impl Operator {
             Self::Div | Self::Mul => (12, 13),
             Self::Assign => (2, 1),
             Self::OpeningBracket => (0, 1),
-            Self::ClosingBracket => (0, 0),
-            Self::Dot => (0, 21),
+            Self::Eq | Self::ClosingBracket => (0, 0),
+            Self::Dot => (20, 21),
         }
     }
 }
@@ -155,12 +169,17 @@ fn try_parse_literal(value: &str) -> Option<Result<Literal, TokenError>> {
             '0'..='9' => {
                 let n = value;
                 if n.contains('.') {
-                    n.parse().map(Value::F32).map_err(TokenError::from)
-                } else if n.ends_with('u') {
-                    n[0..n.len() - 1]
-                        .parse()
-                        .map(Value::U64)
-                        .map_err(TokenError::from)
+                    #[allow(clippy::option_if_let_else)]
+                    if let Some(f) = n.strip_suffix('f') {
+                        f.parse().map(Value::F32).map_err(TokenError::from)
+                    } else {
+                        n.trim_end_matches('d')
+                            .parse()
+                            .map(Value::F64)
+                            .map_err(TokenError::from)
+                    }
+                } else if let Some(n) = n.strip_suffix('u') {
+                    n.parse().map(Value::U64).map_err(TokenError::from)
                 } else {
                     n.trim_end_matches('i')
                         .parse()

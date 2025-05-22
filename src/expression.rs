@@ -23,7 +23,7 @@ impl From<&'static str> for EvalError {
 
 impl Expression {
     pub fn parse(lexer: &mut Lexer, binding_power_lhs: u32) -> Self {
-        let mut expr = match lexer.next().expect("expected Token") {
+        let mut lhs = match lexer.next().expect("expected Token") {
             Token::Variable(v) => Self::Variable(v),
             Token::Literal(literal) => Self::Literal(literal),
             Token::Keyword(keyword) => panic!("expected Expression, found Keyword '{keyword}'"),
@@ -64,10 +64,10 @@ impl Expression {
 
             let rhs = Self::parse(lexer, infix_binding_power.1);
 
-            expr = Self::Operation(operator, [Box::new(expr), Box::new(rhs)]);
+            lhs = Self::Operation(operator, [Box::new(lhs), Box::new(rhs)]);
         }
 
-        expr
+        lhs
     }
 
     #[must_use]
@@ -92,6 +92,7 @@ impl Expression {
                     Operator::Sub => (lhs - &rhs).map_err(EvalError::from),
                     Operator::Mul => (lhs * &rhs).map_err(EvalError::from),
                     Operator::Div => (lhs / &rhs).map_err(EvalError::from),
+                    Operator::Eq => Ok(Value::Bool(lhs == rhs)),
                     Operator::Assign => todo!(),
                     Operator::OpeningBracket => todo!(),
                     Operator::ClosingBracket => todo!(),
@@ -125,7 +126,7 @@ mod test {
     }
 
     macro_rules! expr_cases {
-        ($mod_name:ident $($name:ident: $input:expr => $expected:expr),* ,) => {
+        ($mod_name:ident $($name:ident: $input:expr => $expected:expr),* $(,)?) => {
             mod $mod_name {
                 use super::*;
 
@@ -148,6 +149,9 @@ mod test {
         negativ_number: "-1" => "(- 0 1)",
         signed_number: "12i" => "12",
         unsigned_number: "123u" => "123",
+        float: "1.23" => "1.23",
+        explicit_float: "32.1f" => "32.1",
+        explicit_double: "4.99d" => "4.99",
     }
 
     expr_cases! { math
@@ -158,6 +162,7 @@ mod test {
         parens_affect_precedence: "(2 + b) * 5" => "(* (+ 2 b) 5)",
         nested_parens: "(( ( a )) )" => "a",
         parens_with_mul_and_add: "a + b * 2 * ( c + a ) / 4" => "(+ a (/ (* (* b 2) (+ c a)) 4))",
+        add_floats: "1.5 + 4.0" => "(+ 1.5 4)",
     }
 
     expr_cases! { variables
@@ -177,5 +182,10 @@ mod test {
         dot_operator: "a.b" => "(. a b)",
         chained_dot: "a.b.c.d" => "(. (. (. a b) c) d)",
         spaced_dots: "a . b. c" => "(. (. a b) c)",
+    }
+
+    expr_cases! { equality
+        number_eq: "1 == 3" => "(== 1 3)",
+        sub_expr_eq: "(1 + 2) * 3 == 10 - 1" => "(== (* (+ 1 2) 3) (- 10 1))",
     }
 }

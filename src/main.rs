@@ -8,13 +8,8 @@ pub use value::*;
 
 mod expression;
 mod lexer;
+mod statement;
 mod value;
-
-// #[derive(Debug, Clone)]
-// enum Statement {
-//     Declaration(String, Expression),
-//     Assign(String, Expression),
-// }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Hello, world!");
