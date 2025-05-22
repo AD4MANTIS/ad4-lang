@@ -1,18 +1,16 @@
 use color_eyre::eyre::eyre;
-pub use expression::*;
-pub use lexer::*;
-pub use literal::*;
-pub use statement::*;
+use prelude::*;
 use std::{
     collections::HashMap,
     env::args,
     io::{Write, stdin, stdout},
 };
-pub use value::*;
 
 mod expression;
 mod lexer;
 mod literal;
+mod operator;
+mod prelude;
 mod statement;
 mod value;
 
