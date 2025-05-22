@@ -8,5 +8,6 @@ pedantic = "warn"
 nursery = "warn"
 
 [dependencies]
+color-eyre = { version = "0.6.4", default-features = false }
 strum = { version = "0.27", features = ["derive"] }
 thiserror = "2.0.12"
