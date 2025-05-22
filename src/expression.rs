@@ -155,6 +155,8 @@ mod test {
         float: "1.23" => "1.23",
         explicit_float: "32.1f" => "32.1",
         explicit_double: "4.99d" => "4.99",
+        boolean_true: "true" => "true",
+        boolean_false: "false" => "false",
     }
 
     expr_cases! { math

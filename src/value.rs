@@ -83,7 +83,7 @@ impl PartialEq for Value {
             (Self::F64(l0), Self::F64(r0)) => l0 == r0,
             (Self::F32(l0), Self::F32(r0)) => l0 == r0,
             (Self::Bool(l0), Self::Bool(r0)) => l0 == r0,
-            _ => false,
+            _ => panic!("Invalid Operation"),
         }
     }
 }

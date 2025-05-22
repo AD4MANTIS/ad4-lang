@@ -45,6 +45,8 @@ impl FromStr for Literal {
                 .map(Value::Char)
                 .ok_or(TokenError::InvalidCharLength),
             '\"' => Ok(Value::String(value[1..value.len() - 1].to_string())),
+            _ if value == "true" => Ok(true.into()),
+            _ if value == "false" => Ok(false.into()),
             _ => return Err(ParseLiteralError::NotALiteral),
         }
         .map(Literal)
