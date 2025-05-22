@@ -1,5 +1,7 @@
 pub use expression::*;
 pub use lexer::*;
+pub use literal::*;
+pub use statement::*;
 use std::{
     collections::HashMap,
     io::{Write, stdin, stdout},
@@ -8,6 +10,7 @@ pub use value::*;
 
 mod expression;
 mod lexer;
+mod literal;
 mod statement;
 mod value;
 

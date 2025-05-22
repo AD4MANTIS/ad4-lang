@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display};
+use std::{collections::HashMap, convert::Infallible, fmt::Display, str::FromStr};
 
 use crate::{Lexer, Literal, Operator, Token, Value};
 
@@ -18,6 +18,15 @@ pub enum EvalError {
 impl From<&'static str> for EvalError {
     fn from(value: &'static str) -> Self {
         Self::Static(value)
+    }
+}
+
+impl FromStr for Expression {
+    type Err = Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut lexer = Lexer::build(s);
+        Ok(Self::parse(&mut lexer, 0))
     }
 }
 
@@ -70,12 +79,6 @@ impl Expression {
         lhs
     }
 
-    #[must_use]
-    pub fn from_str(s: &str) -> Self {
-        let mut lexer = Lexer::build(s);
-        Self::parse(&mut lexer, 0)
-    }
-
     pub fn eval(&self, variables: &HashMap<String, Value>) -> Result<Value, EvalError> {
         match self {
             Self::Variable(name) => variables
@@ -121,7 +124,7 @@ mod test {
     use super::*;
 
     fn expr(input: &str, expected: &str) {
-        let s = Expression::from_str(input);
+        let s = Expression::from_str(input).unwrap();
         assert_eq!(s.to_string(), expected, "Input: {input}");
     }
 

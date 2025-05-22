@@ -1,8 +1,8 @@
-use std::fmt::Display;
+use std::str::FromStr;
 
 use strum::{Display, EnumIter, EnumString, IntoEnumIterator, IntoStaticStr};
 
-use crate::Value;
+use crate::{Literal, ParseLiteralError};
 
 pub struct Lexer {
     tokens: Vec<Token>,
@@ -85,8 +85,10 @@ fn tokenize(input: &str) -> impl Iterator<Item = Token> {
                 return x;
             }
 
-            if let Some(literal) = try_parse_literal(token) {
-                return Box::new(std::iter::once(Token::Literal(literal.unwrap())));
+            match Literal::from_str(token) {
+                Ok(literal) => return Box::new(std::iter::once(Token::Literal(literal))),
+                Err(ParseLiteralError::NotALiteral) => {}
+                Err(e) => panic!("{e:?}"),
             }
 
             if let Some(x) = tokenize_operator(token, Operator::Dot) {
@@ -158,49 +160,4 @@ impl Operator {
 #[derive(Debug, Clone, EnumString, Display)]
 pub enum Keyword {
     Let,
-}
-
-#[derive(Debug, Clone)]
-pub struct Literal(pub Value);
-
-fn try_parse_literal(value: &str) -> Option<Result<Literal, TokenError>> {
-    Some(
-        match value.chars().next().unwrap_or(' ') {
-            '0'..='9' => {
-                let n = value;
-                if n.contains('.') {
-                    #[allow(clippy::option_if_let_else)]
-                    if let Some(f) = n.strip_suffix('f') {
-                        f.parse().map(Value::F32).map_err(TokenError::from)
-                    } else {
-                        n.trim_end_matches('d')
-                            .parse()
-                            .map(Value::F64)
-                            .map_err(TokenError::from)
-                    }
-                } else if let Some(n) = n.strip_suffix('u') {
-                    n.parse().map(Value::U64).map_err(TokenError::from)
-                } else {
-                    n.trim_end_matches('i')
-                        .parse()
-                        .map(Value::I64)
-                        .map_err(TokenError::from)
-                }
-            }
-            '\'' => value
-                .chars()
-                .nth(1)
-                .map(Value::Char)
-                .ok_or(TokenError::InvalidCharLength),
-            '\"' => Ok(Value::String(value[1..value.len() - 1].to_string())),
-            _ => return None,
-        }
-        .map(Literal),
-    )
-}
-
-impl Display for Literal {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
 }
