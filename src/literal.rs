@@ -30,6 +30,10 @@ impl FromStr for Literal {
                             .map(Value::F64)
                             .map_err(TokenError::from)
                     }
+                } else if let Some(n) = n.strip_suffix("i32") {
+                    n.parse().map(Value::I32).map_err(TokenError::from)
+                } else if let Some(n) = n.strip_suffix("u32") {
+                    n.parse().map(Value::U32).map_err(TokenError::from)
                 } else if let Some(n) = n.strip_suffix('u') {
                     n.parse().map(Value::U64).map_err(TokenError::from)
                 } else {

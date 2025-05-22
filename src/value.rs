@@ -9,6 +9,8 @@ pub enum Value {
     Char(char),
     I64(i64),
     U64(u64),
+    I32(i32),
+    U32(u32),
     F64(f64),
     F32(f32),
     Bool(bool),
@@ -21,6 +23,8 @@ impl Display for Value {
             Self::Char(c) => write!(f, "{c}"),
             Self::I64(i) => write!(f, "{i}"),
             Self::U64(u) => write!(f, "{u}"),
+            Self::I32(i) => write!(f, "{i}"),
+            Self::U32(u) => write!(f, "{u}"),
             Self::F64(f64) => write!(f, "{f64}"),
             Self::F32(f32) => write!(f, "{f32}"),
             Self::Bool(bool) => write!(f, "{bool}"),
@@ -42,6 +46,8 @@ FromValue!(String => String);
 FromValue!(char => Char);
 FromValue!(i64 => I64);
 FromValue!(u64 => U64);
+FromValue!(i32 => I32);
+FromValue!(u32 => U32);
 FromValue!(f64 => F64);
 FromValue!(f32 => F32);
 FromValue!(bool => Bool);
@@ -73,17 +79,35 @@ Op!(Sub<&Self>: sub - ( I64, U64, F64, F32 ));
 Op!(Mul<&Self>: mul * ( I64, U64, F64, F32 ));
 Op!(Div<&Self>: div / ( I64, U64, F64, F32 ));
 
-impl PartialEq for Value {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::String(l0), Self::String(r0)) => l0 == r0,
-            (Self::Char(l0), Self::Char(r0)) => l0 == r0,
-            (Self::I64(l0), Self::I64(r0)) => l0 == r0,
-            (Self::U64(l0), Self::U64(r0)) => l0 == r0,
-            (Self::F64(l0), Self::F64(r0)) => l0 == r0,
-            (Self::F32(l0), Self::F32(r0)) => l0 == r0,
-            (Self::Bool(l0), Self::Bool(r0)) => l0 == r0,
-            _ => panic!("Invalid Operation"),
+macro_rules! impl_eq {
+    ($($field:ident),+ $(,)? & {
+        $($rest:tt)+
+    }) => {
+        impl PartialEq for Value {
+            fn eq(&self, other: &Self) -> bool {
+                match (self, other) {
+                    $((Self::$field(l0), Self::$field(r0)) => l0 == r0,)+
+                    $($rest)+
+                    (lhs, rhs) => panic!("Invalid Operation. Trying to compare {lhs:?} and {rhs:?}"),
+                }
+            }
         }
-    }
+    };
 }
+
+impl_eq!(String, Char, I64, U64, I32, U32, F64, F32, Bool & {
+    (Self::I64(lhs), Self::U32(rhs)) => *lhs == i64::from(*rhs),
+    (Self::U32(lhs), Self::I64(rhs)) => i64::from(*lhs) == *rhs,
+
+    (Self::I64(lhs), Self::I32(rhs)) => *lhs == i64::from(*rhs),
+    (Self::I32(lhs), Self::I64(rhs)) => i64::from(*lhs) == *rhs,
+
+    (Self::U64(lhs), Self::U32(rhs)) => *lhs == u64::from(*rhs),
+    (Self::U32(lhs), Self::U64(rhs)) => u64::from(*lhs) == *rhs,
+
+    (Self::U64(lhs), Self::I32(rhs)) => Ok(*lhs) == u64::try_from(*rhs),
+    (Self::I32(lhs), Self::U64(rhs)) => u64::try_from(*lhs) == Ok(*rhs),
+
+    (Self::F64(lhs), Self::F32(rhs)) => *lhs == f64::from(*rhs),
+    (Self::F32(lhs), Self::F64(rhs)) => f64::from(*lhs) == *rhs,
+});

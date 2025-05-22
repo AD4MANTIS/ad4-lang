@@ -12,6 +12,8 @@ pub enum Operator {
     Div,
     #[strum(serialize = "==")]
     Eq,
+    #[strum(serialize = "!=")]
+    Neq,
     #[strum(serialize = "=")]
     Assign,
     #[strum(serialize = "(")]
@@ -24,13 +26,13 @@ pub enum Operator {
 
 impl Operator {
     #[must_use]
-    pub const fn infix_binding_power(&self) -> (u32, u32) {
+    pub const fn infix_binding_power(self) -> (u32, u32) {
         match self {
             Self::Add | Self::Sub => (10, 11),
             Self::Div | Self::Mul => (12, 13),
             Self::Assign => (2, 1),
             Self::OpeningBracket => (0, 1),
-            Self::Eq | Self::ClosingBracket => (0, 0),
+            Self::Eq | Self::Neq | Self::ClosingBracket => (0, 0),
             Self::Dot => (20, 21),
         }
     }

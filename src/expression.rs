@@ -95,11 +95,13 @@ impl Expression {
                     Operator::Sub => (lhs - &rhs).map_err(EvalError::from),
                     Operator::Mul => (lhs * &rhs).map_err(EvalError::from),
                     Operator::Div => (lhs / &rhs).map_err(EvalError::from),
-                    Operator::Eq => Ok(Value::Bool(lhs == rhs)),
+                    Operator::Eq => Ok((lhs == rhs).into()),
+                    Operator::Neq => Ok((lhs != rhs).into()),
                     Operator::Assign => todo!(),
-                    Operator::OpeningBracket => todo!(),
-                    Operator::ClosingBracket => todo!(),
                     Operator::Dot => todo!(),
+                    Operator::OpeningBracket | Operator::ClosingBracket => {
+                        panic!("Expected Expression, found Operator '{operator}'")
+                    }
                 }
             }
         }
@@ -190,7 +192,9 @@ mod test {
     }
 
     expr_cases! { equality
-        number_eq: "1 == 3" => "(== 1 3)",
-        sub_expr_eq: "(1 + 2) * 3 == 10 - 1" => "(== (* (+ 1 2) 3) (- 10 1))",
+        basic_eq: "1 == 1" => "(== 1 1)" => true,
+        boolean_neq: "true != false" => "(!= true false)" => true,
+        number_eq: "1 == 3" => "(== 1 3)" => false,
+        sub_expr_eq: "(1 + 2) * 3 == 10 - 1" => "(== (* (+ 1 2) 3) (- 10 1))" => true,
     }
 }
