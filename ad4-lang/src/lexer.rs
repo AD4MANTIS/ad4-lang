@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use strum::{Display, EnumString, IntoEnumIterator};
 
-use crate::{Literal, Operator, ParseLiteralError};
+use crate::{Literal, Operator, ParseLiteralError, prelude::Variable};
 
 pub struct Lexer {
     tokens: Vec<Token>,
@@ -95,7 +95,9 @@ fn tokenize(input: &str) -> impl Iterator<Item = Token> {
                 return x;
             }
 
-            Box::new(std::iter::once(Token::Variable(token.to_string())))
+            Box::new(std::iter::once(Token::Variable(Variable::new(
+                token.to_string(),
+            ))))
         })
 }
 
@@ -118,7 +120,7 @@ pub enum Token {
     Keyword(Keyword),
     Op(Operator),
     Literal(Literal),
-    Variable(String),
+    Variable(Variable),
 }
 
 #[derive(Debug, Clone, EnumString, Display)]

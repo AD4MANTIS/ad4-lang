@@ -1,18 +1,24 @@
 use std::{collections::HashMap, convert::Infallible, fmt::Display, str::FromStr};
 
-use crate::{Lexer, Literal, Operator, Token, Value};
+use crate::{Lexer, Literal, Operator, Token, Value, Variable};
 
 #[derive(Debug, Clone)]
 pub enum Expression {
-    Variable(String),
+    Variable(Variable),
     Literal(Literal),
-    Operation(Operator, [Box<Expression>; 2]),
+    Operation {
+        operator: Operator,
+        lhs: Box<Expression>,
+        rhs: Box<Expression>,
+    },
 }
 
 #[derive(thiserror::Error, Debug)]
 pub enum EvalError {
     #[error("{0}")]
     Static(&'static str),
+    #[error("{0}")]
+    String(String),
 }
 
 impl From<&'static str> for EvalError {
@@ -32,7 +38,10 @@ impl FromStr for Expression {
 
 impl Expression {
     pub fn parse(lexer: &mut Lexer, binding_power_lhs: u32) -> Self {
-        let mut lhs = match lexer.next().expect("expected Token") {
+        let mut lhs = match lexer
+            .next()
+            .expect("expected Token, but there were no Tokens left")
+        {
             Token::Variable(v) => Self::Variable(v),
             Token::Literal(literal) => Self::Literal(literal),
             Token::Keyword(keyword) => panic!("expected Expression, found Keyword '{keyword}'"),
@@ -44,13 +53,11 @@ impl Expression {
                 ));
                 expr
             }
-            Token::Op(operator @ (Operator::Add | Operator::Sub)) => Self::Operation(
+            Token::Op(operator @ (Operator::Add | Operator::Sub)) => Self::Operation {
                 operator,
-                [
-                    Box::new(Self::Literal(Literal(Value::I64(0)))),
-                    Box::new(Self::parse(lexer, operator.infix_binding_power().1)),
-                ],
-            ),
+                lhs: Box::new(Self::Literal(Literal(Value::I64(0)))),
+                rhs: Box::new(Self::parse(lexer, operator.infix_binding_power().1)),
+            },
             Token::Op(operator) => panic!("expected Expression, found Operator '{operator}'"),
         };
 
@@ -73,35 +80,44 @@ impl Expression {
 
             let rhs = Self::parse(lexer, infix_binding_power.1);
 
-            lhs = Self::Operation(operator, [Box::new(lhs), Box::new(rhs)]);
+            lhs = Self::Operation {
+                operator,
+                lhs: Box::new(lhs),
+                rhs: Box::new(rhs),
+            };
         }
 
         lhs
     }
 
-    pub fn eval(&self, variables: &HashMap<String, Value>) -> Result<Value, EvalError> {
+    pub fn eval(&self, variables: &mut HashMap<Variable, Value>) -> Result<Value, EvalError> {
         match self {
-            Self::Variable(name) => variables
-                .get(name)
+            Self::Variable(variable) => variables
+                .get(variable)
                 .cloned()
-                .ok_or(EvalError::Static("unknown variable")),
+                .ok_or_else(|| EvalError::String(format!("unknown variable '{}'", variable.name))),
             Self::Literal(literal) => Ok(literal.0.clone()),
-            Self::Operation(operator, expressions) => {
-                let lhs = expressions[0].eval(variables)?;
-                let rhs = expressions[1].eval(variables)?;
+            Self::Operation { operator, lhs, rhs } => {
+                let rhs = rhs.eval(variables)?;
 
                 match operator {
-                    Operator::Add => (lhs + &rhs).map_err(EvalError::from),
-                    Operator::Sub => (lhs - &rhs).map_err(EvalError::from),
-                    Operator::Mul => (lhs * &rhs).map_err(EvalError::from),
-                    Operator::Div => (lhs / &rhs).map_err(EvalError::from),
-                    Operator::Eq => Ok((lhs == rhs).into()),
-                    Operator::Neq => Ok((lhs != rhs).into()),
-                    Operator::Assign => todo!(),
+                    Operator::Add => (lhs.eval(variables)? + &rhs).map_err(EvalError::from),
+                    Operator::Sub => (lhs.eval(variables)? - &rhs).map_err(EvalError::from),
+                    Operator::Mul => (lhs.eval(variables)? * &rhs).map_err(EvalError::from),
+                    Operator::Div => (lhs.eval(variables)? / &rhs).map_err(EvalError::from),
+                    Operator::Eq => Ok((lhs.eval(variables)? == rhs).into()),
+                    Operator::Neq => Ok((lhs.eval(variables)? != rhs).into()),
+                    Operator::Assign => match &**lhs {
+                        Self::Variable(var) => {
+                            variables.insert(var.clone(), rhs.clone());
+                            Ok(rhs)
+                        }
+                        _ => Err(EvalError::String(format!("Expected Variable, found {lhs}"))),
+                    },
                     Operator::Dot => todo!(),
-                    Operator::OpeningBracket | Operator::ClosingBracket => {
-                        panic!("Expected Expression, found Operator '{operator}'")
-                    }
+                    Operator::OpeningBracket | Operator::ClosingBracket => Err(EvalError::String(
+                        format!("Expected Expression, found Operator '{operator}'"),
+                    )),
                 }
             }
         }
@@ -112,11 +128,8 @@ impl Display for Expression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Literal(literal) => literal.fmt(f),
-            Self::Variable(var) => var.fmt(f),
-            Self::Operation(operator, expressions) => f.write_fmt(format_args!(
-                "({operator} {} {})",
-                expressions[0], expressions[1]
-            )),
+            Self::Variable(var) => write!(f, "{}", var.name),
+            Self::Operation { operator, lhs, rhs } => write!(f, "({operator} {lhs} {rhs})"),
         }
     }
 }
@@ -131,13 +144,10 @@ mod test {
 
         if let Some(result) = result {
             if let Ok(eval_result) = s.eval(
-                &[
-                    ("a".to_string(), 1i64.into()),
-                    ("b".to_string(), 2i64.into()),
-                    ("c".to_string(), 3i64.into()),
-                ]
-                .into_iter()
-                .collect::<HashMap<_, _>>(),
+                &mut [("a", 1i64.into()), ("b", 2i64.into()), ("c", 3i64.into())]
+                    .into_iter()
+                    .map(|x| (Variable::new(x.0.to_string()), x.1))
+                    .collect::<HashMap<_, _>>(),
             ) {
                 assert_eq!(eval_result, result);
             }
@@ -206,6 +216,8 @@ mod test {
         div_then_mul_zero: "a / b * c" => "(* (/ a b) c)" => 0,
         div_then_mul: "16 / 4 * 2" => "(* (/ 16 4) 2)" => 8,
         long_add_chain: "a + b + c + d" => "(+ (+ (+ a b) c) d)" => 6,
+
+        assign_variable: "p = 3.1" => "(= p 3.1)" => 3.1,
     }
 
     expr_cases! { dot

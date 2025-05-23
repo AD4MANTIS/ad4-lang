@@ -13,12 +13,13 @@ mod operator;
 mod prelude;
 mod statement;
 mod value;
+mod variable;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let debug = args().any(|args| matches!(args.as_str(), "--debug" | "-d"));
     color_eyre::install()?;
 
-    let variables = HashMap::<String, Value>::new();
+    let mut variables = HashMap::<Variable, Value>::new();
 
     let mut input = String::new();
     loop {
@@ -33,7 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let mut lexer = Lexer::build(&input);
         let expr = Expression::parse(&mut lexer, 0);
-        let result = expr.eval(&variables).map_err(|e| eyre!(e));
+        let result = expr.eval(&mut variables).map_err(|e| eyre!(e));
 
         if debug {
             match result {
