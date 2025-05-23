@@ -1,13 +1,21 @@
-[package]
-name = "ad4-lang"
-version = "0.1.0"
-edition = "2024"
+[workspace]
+resolver = "2"
 
-[lints.clippy]
+package.authors = ["AD4MANTIS"]
+package.version = "0.1.0"
+package.edition = "2024"
+
+members = ["ad4-lang", "macros"]
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+enum_glob_use = { level = "forbid", priority = 1 }
 pedantic = "warn"
 nursery = "warn"
 
-[dependencies]
+[workspace.dependencies]
+thiserror = "2.0.12"
 color-eyre = { version = "0.6.4", default-features = false }
 strum = { version = "0.27", features = ["derive"] }
-thiserror = "2.0.12"

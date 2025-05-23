@@ -1,0 +1,13 @@
+[package]
+name = "ad4-lang"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+color-eyre.workspace = true
+strum.workspace = true
+macros = { path = "../macros/" }
+
+[lints]
+workspace = true

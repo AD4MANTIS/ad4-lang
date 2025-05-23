@@ -1,56 +1,20 @@
-use std::{
-    fmt::Display,
-    ops::{Add, Div, Mul, Sub},
-};
+use std::ops::{Add, Div, Mul, Sub};
 
-#[derive(Debug, Clone)]
+use macros::From;
+use strum::Display;
+
+#[derive(Debug, Display, Clone, From)]
 pub enum Value {
-    String(String),
-    Char(char),
-    I64(i64),
-    U64(u64),
-    I32(i32),
-    U32(u32),
-    F64(f64),
-    F32(f32),
-    Bool(bool),
+    String(#[from] String),
+    Char(#[from] char),
+    I64(#[from] i64),
+    U64(#[from] u64),
+    I32(#[from] i32),
+    U32(#[from] u32),
+    F64(#[from] f64),
+    F32(#[from] f32),
+    Bool(#[from] bool),
 }
-
-impl Display for Value {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::String(s) => write!(f, "{s}"),
-            Self::Char(c) => write!(f, "{c}"),
-            Self::I64(i) => write!(f, "{i}"),
-            Self::U64(u) => write!(f, "{u}"),
-            Self::I32(i) => write!(f, "{i}"),
-            Self::U32(u) => write!(f, "{u}"),
-            Self::F64(f64) => write!(f, "{f64}"),
-            Self::F32(f32) => write!(f, "{f32}"),
-            Self::Bool(bool) => write!(f, "{bool}"),
-        }
-    }
-}
-
-macro_rules! FromValue {
-    ($type:ty => $field:ident) => {
-        impl From<$type> for Value {
-            fn from(value: $type) -> Self {
-                Self::$field(value)
-            }
-        }
-    };
-}
-
-FromValue!(String => String);
-FromValue!(char => Char);
-FromValue!(i64 => I64);
-FromValue!(u64 => U64);
-FromValue!(i32 => I32);
-FromValue!(u32 => U32);
-FromValue!(f64 => F64);
-FromValue!(f32 => F32);
-FromValue!(bool => Bool);
 
 macro_rules! Op {
     ($trait:ty: $fn_name:ident $op:tt ( $($field:ident),+ ) $( & { $($rest:tt)+ } )? ) => {
