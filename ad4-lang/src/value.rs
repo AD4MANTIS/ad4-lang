@@ -5,14 +5,23 @@ use strum::Display;
 
 #[derive(Debug, Display, Clone, From)]
 pub enum Value {
+    #[strum(to_string = "{0}")]
     String(#[from] String),
+    #[strum(to_string = "{0}")]
     Char(#[from] char),
+    #[strum(to_string = "{0}")]
     I64(#[from] i64),
+    #[strum(to_string = "{0}")]
     U64(#[from] u64),
+    #[strum(to_string = "{0}")]
     I32(#[from] i32),
+    #[strum(to_string = "{0}")]
     U32(#[from] u32),
+    #[strum(to_string = "{0}")]
     F64(#[from] f64),
+    #[strum(to_string = "{0}")]
     F32(#[from] f32),
+    #[strum(to_string = "{0}")]
     Bool(#[from] bool),
 }
 
