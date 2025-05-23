@@ -31,8 +31,9 @@ impl Operator {
             Self::Add | Self::Sub => (10, 11),
             Self::Div | Self::Mul => (12, 13),
             Self::Assign => (2, 1),
+            Self::Eq | Self::Neq => (8, 9),
             Self::OpeningBracket => (0, 1),
-            Self::Eq | Self::Neq | Self::ClosingBracket => (0, 0),
+            Self::ClosingBracket => (0, 0),
             Self::Dot => (20, 21),
         }
     }

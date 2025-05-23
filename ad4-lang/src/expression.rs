@@ -21,6 +21,12 @@ pub enum EvalError {
     String(String),
 }
 
+impl From<String> for EvalError {
+    fn from(value: String) -> Self {
+        Self::String(value)
+    }
+}
+
 impl From<&'static str> for EvalError {
     fn from(value: &'static str) -> Self {
         Self::Static(value)
@@ -218,6 +224,7 @@ mod test {
         long_add_chain: "a + b + c + d" => "(+ (+ (+ a b) c) d)" => 6,
 
         assign_variable: "p = 3.1" => "(= p 3.1)" => 3.1,
+        assign_from_expr: "x = a == 2" => "(= x (== a 2))" => false,
     }
 
     expr_cases! { dot

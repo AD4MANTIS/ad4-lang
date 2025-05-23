@@ -36,14 +36,18 @@ macro_rules! Op {
                         (Self::$field(lhs), Self::$field(rhs)) => (lhs $op rhs).into(),
                     )+
                     $($($rest)+ ,)?
-                    _ => return Err("invalid operation")
+                    (lhs, rhs) => return Err(format!(
+                        "Invalid operation, trying to perform '{}' ({}) on {lhs:?} and {rhs:?} which is not supported",
+                        stringify!($fn_name),
+                        stringify!($op)
+                    ))
                 })
             }
         }
     };
 }
 
-pub type ValueOperationResult<T> = Result<T, &'static str>;
+pub type ValueOperationResult<T> = Result<T, String>;
 
 Op!(Add<&Self>: add + (String, I64, U64, F64, F32) & {
     (Self::Char(a), Self::Char(b)) => (a.to_string() + &b.to_string()).into()
