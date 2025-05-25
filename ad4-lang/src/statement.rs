@@ -1,7 +1,7 @@
-use crate::Expression;
+use crate::{Expression, prelude::Variable};
 
 #[derive(Debug, Clone)]
 pub enum Statement {
-    Declaration(String, Expression),
-    Assign(String, Expression),
+    Expr(Expression),
+    Declaration(Variable, Expression),
 }

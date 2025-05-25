@@ -34,7 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let mut lexer = Lexer::build(&input);
         let expr = Expression::parse(&mut lexer, 0);
-        let result = expr.eval(&mut variables).map_err(|e| eyre!(e));
+        let result = expr.map(|expr| expr.eval(&mut variables).map_err(|e| eyre!(e)));
 
         if debug {
             match result {
@@ -43,7 +43,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         } else {
             match result {
-                Ok(result) => println!("{result}"),
+                Ok(Ok(result)) => println!("{result}"),
+                Ok(Err(e)) => println!("{e}"),
                 Err(e) => println!("{e}"),
             }
         }

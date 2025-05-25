@@ -2,7 +2,7 @@ use std::{fmt::Display, str::FromStr};
 
 use crate::{TokenError, Value};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Literal(pub Value);
 
 #[derive(thiserror::Error, Debug)]

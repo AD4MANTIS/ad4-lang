@@ -1,27 +1,46 @@
-use strum::{Display, EnumIter, IntoStaticStr};
+use std::fmt::Display;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoStaticStr, EnumIter, Display)]
+use strum::EnumIter;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
 pub enum Operator {
-    #[strum(serialize = "+")]
     Add,
-    #[strum(serialize = "-")]
     Sub,
-    #[strum(serialize = "*")]
     Mul,
-    #[strum(serialize = "/")]
     Div,
-    #[strum(serialize = "==")]
     Eq,
-    #[strum(serialize = "!=")]
     Neq,
-    #[strum(serialize = "=")]
     Assign,
-    #[strum(serialize = "(")]
     OpeningBracket,
-    #[strum(serialize = ")")]
     ClosingBracket,
-    #[strum(serialize = ".")]
+    OpeningCurlyBrace,
+    ClosingCurlyBrace,
     Dot,
+}
+
+impl From<Operator> for &'static str {
+    fn from(value: Operator) -> Self {
+        match value {
+            Operator::Add => "+",
+            Operator::Sub => "-",
+            Operator::Mul => "*",
+            Operator::Div => "/",
+            Operator::Eq => "==",
+            Operator::Neq => "!=",
+            Operator::Assign => "=",
+            Operator::OpeningBracket => "(",
+            Operator::ClosingBracket => ")",
+            Operator::OpeningCurlyBrace => "{",
+            Operator::ClosingCurlyBrace => "}",
+            Operator::Dot => ".",
+        }
+    }
+}
+
+impl Display for Operator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str((*self).into())
+    }
 }
 
 impl Operator {
@@ -32,8 +51,8 @@ impl Operator {
             Self::Div | Self::Mul => (12, 13),
             Self::Assign => (2, 1),
             Self::Eq | Self::Neq => (8, 9),
-            Self::OpeningBracket => (0, 1),
-            Self::ClosingBracket => (0, 0),
+            Self::OpeningBracket | Self::OpeningCurlyBrace => (0, 1),
+            Self::ClosingBracket | Self::ClosingCurlyBrace => (0, 0),
             Self::Dot => (20, 21),
         }
     }

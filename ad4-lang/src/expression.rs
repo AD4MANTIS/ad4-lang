@@ -1,4 +1,8 @@
-use std::{collections::HashMap, convert::Infallible, fmt::Display, str::FromStr};
+use std::{
+    collections::HashMap,
+    fmt::{Debug, Display},
+    str::FromStr,
+};
 
 use crate::{Lexer, Literal, Operator, Token, Value, Variable};
 
@@ -10,6 +14,41 @@ pub enum Expression {
         operator: Operator,
         lhs: Box<Expression>,
         rhs: Box<Expression>,
+    },
+    // Block(Vec<Statement>, Option<Box<Expression>>),
+}
+
+impl Expression {
+    fn operation(lhs: Self, op: Operator, rhs: Self) -> Self {
+        Self::Operation {
+            operator: op,
+            lhs: Box::new(lhs),
+            rhs: Box::new(rhs),
+        }
+    }
+}
+
+pub trait DisplayDebug: Display + Debug {}
+
+impl<T: Display + Debug> DisplayDebug for T {}
+
+#[derive(thiserror::Error, Debug)]
+pub enum ParseError {
+    #[error("expected Expression, but there were no tokens left")]
+    NoTokensLeft,
+    #[error("expected {x}, found {y} '{found:?}'")]
+    ExpectedXFoundY {
+        x: &'static str,
+        y: &'static str,
+        found: Box<dyn DisplayDebug>,
+    },
+    #[error("Missing closing delimiter for `{for_opening}`")]
+    MissingClosingDelimiter { for_opening: Operator },
+    #[error("Mismatched closing delimiter for `{opening}`, expected {expected}, found {found}")]
+    MismatchedClosingDelimiter {
+        opening: Operator,
+        expected: Operator,
+        found: Token,
     },
 }
 
@@ -34,44 +73,74 @@ impl From<&'static str> for EvalError {
 }
 
 impl FromStr for Expression {
-    type Err = Infallible;
+    type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut lexer = Lexer::build(s);
-        Ok(Self::parse(&mut lexer, 0))
+        Self::parse(&mut lexer, 0)
     }
 }
 
 impl Expression {
-    pub fn parse(lexer: &mut Lexer, binding_power_lhs: u32) -> Self {
-        let mut lhs = match lexer
-            .next()
-            .expect("expected Token, but there were no Tokens left")
-        {
+    pub fn parse(lexer: &mut Lexer, binding_power_lhs: u32) -> Result<Self, ParseError> {
+        let mut lhs = match lexer.next().ok_or(ParseError::NoTokensLeft)? {
             Token::Variable(v) => Self::Variable(v),
             Token::Literal(literal) => Self::Literal(literal),
-            Token::Keyword(keyword) => panic!("expected Expression, found Keyword '{keyword}'"),
-            Token::Op(bracket @ Operator::OpeningBracket) => {
-                let expr = Self::parse(lexer, bracket.infix_binding_power().1);
-                assert!(matches!(
-                    lexer.next(),
-                    Some(Token::Op(Operator::ClosingBracket))
-                ));
+            Token::Keyword(keyword) => {
+                return Err(ParseError::ExpectedXFoundY {
+                    x: "Expression",
+                    y: "Keyword",
+                    found: Box::new(keyword),
+                });
+            }
+            Token::Op(bracket @ (Operator::OpeningBracket | Operator::OpeningCurlyBrace)) => {
+                let expr = Self::parse(lexer, bracket.infix_binding_power().1)?;
+
+                let Some(found_closing_bracket) = lexer.next() else {
+                    return Err(ParseError::MissingClosingDelimiter {
+                        for_opening: bracket,
+                    });
+                };
+
+                let expected_closing_bracket = if bracket == Operator::OpeningBracket {
+                    Operator::ClosingBracket
+                } else {
+                    Operator::ClosingCurlyBrace
+                };
+
+                if found_closing_bracket != Token::Op(expected_closing_bracket) {
+                    return Err(ParseError::MismatchedClosingDelimiter {
+                        opening: bracket,
+                        expected: expected_closing_bracket,
+                        found: found_closing_bracket,
+                    });
+                }
+
                 expr
             }
-            Token::Op(operator @ (Operator::Add | Operator::Sub)) => Self::Operation {
+            Token::Op(operator @ (Operator::Add | Operator::Sub)) => Self::operation(
+                Self::Literal(Literal(Value::I64(0))),
                 operator,
-                lhs: Box::new(Self::Literal(Literal(Value::I64(0)))),
-                rhs: Box::new(Self::parse(lexer, operator.infix_binding_power().1)),
-            },
-            Token::Op(operator) => panic!("expected Expression, found Operator '{operator}'"),
+                Self::parse(lexer, operator.infix_binding_power().1)?,
+            ),
+            Token::Op(operator) => {
+                return Err(ParseError::ExpectedXFoundY {
+                    x: "Expression",
+                    y: "Operator",
+                    found: Box::new(operator),
+                });
+            }
         };
 
         loop {
             let operator = match lexer.peek() {
                 Some(Token::Op(operator)) => *operator,
                 Some(token) => {
-                    panic!("expected Operator, found '{token}'")
+                    return Err(ParseError::ExpectedXFoundY {
+                        x: "Operator",
+                        y: "Token",
+                        found: Box::new(token.clone()),
+                    });
                 }
                 None => {
                     break;
@@ -84,16 +153,12 @@ impl Expression {
             }
             lexer.next();
 
-            let rhs = Self::parse(lexer, infix_binding_power.1);
+            let rhs = Self::parse(lexer, infix_binding_power.1)?;
 
-            lhs = Self::Operation {
-                operator,
-                lhs: Box::new(lhs),
-                rhs: Box::new(rhs),
-            };
+            lhs = Self::operation(lhs, operator, rhs);
         }
 
-        lhs
+        Ok(lhs)
     }
 
     pub fn eval(&self, variables: &mut HashMap<Variable, Value>) -> Result<Value, EvalError> {
@@ -121,9 +186,12 @@ impl Expression {
                         _ => Err(EvalError::String(format!("Expected Variable, found {lhs}"))),
                     },
                     Operator::Dot => todo!(),
-                    Operator::OpeningBracket | Operator::ClosingBracket => Err(EvalError::String(
-                        format!("Expected Expression, found Operator '{operator}'"),
-                    )),
+                    Operator::OpeningBracket
+                    | Operator::ClosingBracket
+                    | Operator::OpeningCurlyBrace
+                    | Operator::ClosingCurlyBrace => Err(EvalError::String(format!(
+                        "Expected Expression, found Operator '{operator}'"
+                    ))),
                 }
             }
         }
@@ -133,7 +201,7 @@ impl Expression {
 impl Display for Expression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Literal(literal) => literal.fmt(f),
+            Self::Literal(literal) => write!(f, "{literal}"),
             Self::Variable(var) => write!(f, "{}", var.name),
             Self::Operation { operator, lhs, rhs } => write!(f, "({operator} {lhs} {rhs})"),
         }
@@ -217,6 +285,8 @@ mod test {
         left_associative_add: "1 + 2 + 3" => "(+ (+ 1 2) 3)" => 6,
         left_associative_mul_numbers: "1 * 2 * 3" => "(* (* 1 2) 3)" => 6,
         parens_around_number: "((1))" => "1" => 1,
+        curly: "{ 1 }" => "1" => 1,
+        curly_no_space: "{1+2} + 3" => "(+ (+ 1 2) 3)" => 6,
         add_with_parens_right: "a + (b + c)" => "(+ a (+ b c))" => 6,
         mul_with_parens_both: "(a + b) * (c + d)" => "(* (+ a b) (+ c d))" => 7,
         div_then_mul_zero: "a / b * c" => "(* (/ a b) c)" => 0,

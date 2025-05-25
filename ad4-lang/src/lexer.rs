@@ -67,7 +67,7 @@ fn tokenize(input: &str) -> impl Iterator<Item = Token> {
 
     assert!(
         current_literal_start.is_none(),
-        "Expected closing delimiter {}",
+        "Expected closing delimiter for `{}`",
         current_literal_start.unwrap_or_default()
     );
 
@@ -115,7 +115,7 @@ fn tokenize_operator(
     ))
 }
 
-#[derive(Debug, Clone, Display)]
+#[derive(Debug, Clone, Display, PartialEq)]
 pub enum Token {
     Keyword(Keyword),
     Op(Operator),
@@ -123,7 +123,26 @@ pub enum Token {
     Variable(Variable),
 }
 
-#[derive(Debug, Clone, EnumString, Display)]
+#[derive(Debug, Clone, EnumString, Display, PartialEq, Eq)]
+#[strum(serialize_all = "lowercase")]
 pub enum Keyword {
+    Struct,
+    Enum,
+    Type,
+    Function,
+    Trait,
+    Impl,
+    Use,
+
     Let,
+    If,
+    Else,
+    While,
+    For,
+    Match,
+
+    Return,
+    Continue,
+    Break,
+    Yield,
 }
