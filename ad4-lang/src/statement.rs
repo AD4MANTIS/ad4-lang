@@ -3,9 +3,8 @@ use std::{collections::HashMap, fmt::Display};
 use thiserror::Error;
 
 use crate::{
-    EvalError, Expression, Lexer, Literal, Value, Variable, expression,
-    lexer::{Keyword, Token},
-    prelude::Operator,
+    EvalError, Expression, Keyword, Lexer, Literal, Operator, Value, Variable, expression,
+    lexer::Token,
 };
 
 #[derive(Debug, Clone)]

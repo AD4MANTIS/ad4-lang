@@ -4,7 +4,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::{Lexer, Literal, Operator, Token, Value, Variable};
+use crate::{Lexer, Literal, Operator, Token, TokenizeError, Value, Variable};
 
 #[derive(Debug, Clone)]
 pub enum Expression {
@@ -34,6 +34,8 @@ impl<T: Display + Debug> DisplayDebug for T {}
 
 #[derive(thiserror::Error, Debug)]
 pub enum ParseError {
+    #[error(transparent)]
+    Lexer(#[from] TokenizeError),
     #[error("Expected Expression, but there were no tokens left")]
     NoTokensLeft,
     #[error("Expected {x}, found {y} '{found:?}'")]
@@ -78,7 +80,7 @@ impl FromStr for Expression {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut lexer = Lexer::build(s);
+        let mut lexer = Lexer::build(s)?;
         Self::parse(&mut lexer, 0)
     }
 }

@@ -1,4 +1,3 @@
-use color_eyre::eyre::eyre;
 use prelude::*;
 use std::{
     collections::HashMap,
@@ -7,6 +6,7 @@ use std::{
 };
 
 mod expression;
+mod keyword;
 mod lexer;
 mod literal;
 mod operator;
@@ -32,23 +32,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             break;
         }
 
-        let mut lexer = Lexer::build(&input);
-        let expr = Statement::parse(&mut lexer);
-        let result = expr.map(|expr| expr.execute(&mut variables).map_err(|e| eyre!(e)));
-
-        if debug {
-            match result {
-                Ok(result) => println!("{result:?}"),
-                Err(e) => println!("{e:?}"),
-            }
-        } else {
-            match result {
-                Ok(Ok(result)) => println!("{result}"),
-                Ok(Err(e)) => println!("{e}"),
-                Err(e) => println!("{e}"),
-            }
+        macro_rules! print_err {
+            { $expr:expr } => {
+                match $expr {
+                    Ok(x) => x,
+                    Err(e) => {
+                        print_cond(e, debug);
+                        continue;
+                    }
+                }
+            };
         }
+
+        let mut lexer = print_err! { Lexer::build(&input) };
+        let expr = print_err! { Statement::parse(&mut lexer) };
+        let result = print_err! { expr.execute(&mut variables) };
+
+        print_cond(result, debug);
     }
 
     Ok(())
+}
+
+fn print_cond<T: std::fmt::Display + std::fmt::Debug>(val: T, debug: bool) {
+    if debug {
+        println!("{val:?}");
+    } else {
+        println!("{val}");
+    }
 }

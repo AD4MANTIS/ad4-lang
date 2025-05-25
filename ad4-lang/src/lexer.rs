@@ -1,19 +1,26 @@
 use std::str::FromStr;
 
-use strum::{Display, EnumString, IntoEnumIterator};
+use strum::{Display, IntoEnumIterator};
 
-use crate::{Literal, Operator, ParseLiteralError, literal::parse_float, prelude::Variable};
+use crate::{Keyword, Literal, Operator, ParseLiteralError, Variable, literal::parse_float};
 
 pub struct Lexer {
     tokens: Vec<Token>,
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum TokenizeError {
+    #[error(transparent)]
+    Token(#[from] TokenError),
+}
+
 impl Lexer {
-    #[must_use]
-    pub fn build(input: &str) -> Self {
-        let mut tokens: Vec<_> = tokenize(input).collect();
+    pub fn build(input: &str) -> Result<Self, TokenizeError> {
+        let mut tokens = tokenize(input)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(TokenizeError::from)?;
         tokens.reverse();
-        Self { tokens }
+        Ok(Self { tokens })
     }
 
     #[must_use]
@@ -40,7 +47,13 @@ pub enum TokenError {
     InvalidCharLength,
 }
 
-fn tokenize(input: &str) -> impl Iterator<Item = Token> {
+fn tokenize(input: &str) -> impl Iterator<Item = Result<Token, TokenError>> {
+    let split_input = split_into_tokens(input);
+
+    split_input.into_iter().map(str::parse)
+}
+
+fn split_into_tokens(input: &str) -> impl Iterator<Item = &str> {
     let mut current_literal_start: Option<char> = None;
 
     #[allow(
@@ -72,29 +85,7 @@ fn tokenize(input: &str) -> impl Iterator<Item = Token> {
         current_literal_start.unwrap_or_default()
     );
 
-    split_input.into_iter().map(|token| -> Token {
-        if token == SEMICOLON {
-            return Token::Semicolon();
-        }
-
-        if let Ok(keyword) = Keyword::try_from(token) {
-            return Token::Keyword(keyword);
-        }
-
-        for op in Operator::iter() {
-            if token == op.as_str() {
-                return Token::Op(op);
-            }
-        }
-
-        match Literal::from_str(token) {
-            Ok(literal) => return Token::Literal(literal),
-            Err(ParseLiteralError::NotALiteral) => {}
-            Err(e) => panic!("{e:?}"),
-        }
-
-        Token::Variable(Variable::new(token.to_string()))
-    })
+    split_input.into_iter()
 }
 
 fn split_special_operators(parsing_str: &str) -> Vec<&str> {
@@ -138,28 +129,28 @@ pub enum Token {
 
 const SEMICOLON: &str = ";";
 
-#[derive(Debug, Clone, EnumString, Display, PartialEq, Eq)]
-#[strum(serialize_all = "lowercase")]
-pub enum Keyword {
-    Struct,
-    Enum,
-    Type,
-    Function,
-    Trait,
-    Impl,
-    Use,
+impl FromStr for Token {
+    type Err = TokenError;
 
-    Let,
-    If,
-    Else,
-    While,
-    For,
-    Match,
+    fn from_str(token: &str) -> Result<Self, Self::Err> {
+        if token == SEMICOLON {
+            return Ok(Self::Semicolon());
+        }
 
-    Void,
+        if let Ok(keyword) = Keyword::try_from(token) {
+            return Ok(Self::Keyword(keyword));
+        }
 
-    Return,
-    Continue,
-    Break,
-    Yield,
+        for op in Operator::iter() {
+            if token == op.as_str() {
+                return Ok(Self::Op(op));
+            }
+        }
+
+        Ok(match Literal::from_str(token) {
+            Ok(literal) => Self::Literal(literal),
+            Err(ParseLiteralError::NotALiteral) => Self::Variable(Variable::new(token.to_string())),
+            Err(ParseLiteralError::Token(e)) => return Err(e),
+        })
+    }
 }
