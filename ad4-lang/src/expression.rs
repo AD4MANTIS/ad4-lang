@@ -34,9 +34,9 @@ impl<T: Display + Debug> DisplayDebug for T {}
 
 #[derive(thiserror::Error, Debug)]
 pub enum ParseError {
-    #[error("expected Expression, but there were no tokens left")]
+    #[error("Expected Expression, but there were no tokens left")]
     NoTokensLeft,
-    #[error("expected {x}, found {y} '{found:?}'")]
+    #[error("Expected {x}, found {y} '{found:?}'")]
     ExpectedXFoundY {
         x: &'static str,
         y: &'static str,
@@ -50,6 +50,8 @@ pub enum ParseError {
         expected: Operator,
         found: Token,
     },
+    #[error("Unexpected end of expression")]
+    UnexpectedEndOfExpression,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -84,6 +86,7 @@ impl FromStr for Expression {
 impl Expression {
     pub fn parse(lexer: &mut Lexer, binding_power_lhs: u32) -> Result<Self, ParseError> {
         let mut lhs = match lexer.next().ok_or(ParseError::NoTokensLeft)? {
+            Token::Semicolon() => return Err(ParseError::UnexpectedEndOfExpression),
             Token::Variable(v) => Self::Variable(v),
             Token::Literal(literal) => Self::Literal(literal),
             Token::Keyword(keyword) => {
@@ -135,15 +138,15 @@ impl Expression {
         loop {
             let operator = match lexer.peek() {
                 Some(Token::Op(operator)) => *operator,
+                Some(Token::Semicolon()) | None => {
+                    break;
+                }
                 Some(token) => {
                     return Err(ParseError::ExpectedXFoundY {
                         x: "Operator",
                         y: "Token",
                         found: Box::new(token.clone()),
                     });
-                }
-                None => {
-                    break;
                 }
             };
 
@@ -213,11 +216,11 @@ mod test {
     use super::*;
 
     fn expr(input: &str, expected: &str, result: Option<Value>) {
-        let s = Expression::from_str(input).unwrap();
-        assert_eq!(s.to_string(), expected, "Input: {input}");
+        let expr = Expression::from_str(input).unwrap();
+        assert_eq!(expr.to_string(), expected, "Input: {input}");
 
         if let Some(result) = result {
-            if let Ok(eval_result) = s.eval(
+            if let Ok(eval_result) = expr.eval(
                 &mut [("a", 1i64.into()), ("b", 2i64.into()), ("c", 3i64.into())]
                     .into_iter()
                     .map(|x| (Variable::new(x.0.to_string()), x.1))
@@ -259,9 +262,11 @@ mod test {
         negativ_number: "-1" => "(- 0 1)" => -1,
         signed_number: "12i" => "12" => 12,
         unsigned_number: "123u" => "123" => 123,
-        float: "1.23" => "1.23" => 1.23,
+        double: "1.23" => "1.23" => 1.23,
         explicit_float: "32.1f" => "32.1" => 32.1f32,
         explicit_double: "4.99d" => "4.99" => 4.99,
+        float_no_fractions: "1f" => "1" => 1f32,
+        double_no_fraction_implicit: "1." => "1" => 1.0,
         boolean_true: "true" => "true" => true,
         boolean_false: "false" => "false" => false,
     }

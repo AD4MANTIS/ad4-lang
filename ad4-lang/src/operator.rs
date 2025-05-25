@@ -37,6 +37,12 @@ impl From<Operator> for &'static str {
     }
 }
 
+impl Operator {
+    pub fn as_str(self) -> &'static str {
+        self.into()
+    }
+}
+
 impl Display for Operator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str((*self).into())

@@ -19,18 +19,11 @@ pub fn derive_from(input: TokenStream) -> TokenStream {
 
     for variant in variants {
         let Fields::Unnamed(fields) = &variant.fields else {
-            return syn::Error::new_spanned(variant, "#[from] can only be used on tuple variants")
-                .to_compile_error()
-                .into();
+            continue;
         };
 
         if fields.unnamed.len() != 1 {
-            return syn::Error::new_spanned(
-                variant,
-                "#[from] only supported on tuple variants with exactly one field",
-            )
-            .to_compile_error()
-            .into();
+            continue;
         }
 
         let field = &fields.unnamed[0];

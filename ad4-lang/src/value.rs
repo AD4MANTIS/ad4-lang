@@ -23,6 +23,14 @@ pub enum Value {
     F32(#[from] f32),
     #[strum(to_string = "{0}")]
     Bool(#[from] bool),
+    #[strum(to_string = "void")]
+    Void,
+}
+
+impl From<()> for Value {
+    fn from((): ()) -> Self {
+        Self::Void
+    }
 }
 
 macro_rules! Op {
@@ -37,7 +45,7 @@ macro_rules! Op {
                     )+
                     $($($rest)+ ,)?
                     (lhs, rhs) => return Err(format!(
-                        "Invalid operation, trying to perform '{}' ({}) on {lhs:?} and {rhs:?} which is not supported",
+                        "Invalid operation, trying to perform '{}' (`{}`) on {lhs:?} and {rhs:?} which is not supported",
                         stringify!($fn_name),
                         stringify!($op)
                     ))

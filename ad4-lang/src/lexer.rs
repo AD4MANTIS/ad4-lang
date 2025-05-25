@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use strum::{Display, EnumString, IntoEnumIterator};
 
-use crate::{Literal, Operator, ParseLiteralError, prelude::Variable};
+use crate::{Literal, Operator, ParseLiteralError, literal::parse_float, prelude::Variable};
 
 pub struct Lexer {
     tokens: Vec<Token>,
@@ -62,6 +62,7 @@ fn tokenize(input: &str) -> impl Iterator<Item = Token> {
             }
             _ => char.is_whitespace() && current_literal_start.is_none(),
         })
+        .flat_map(|parsing_str| split_special_operators(parsing_str))
         .filter(|char| !char.is_empty())
         .collect::<Vec<_>>();
 
@@ -71,57 +72,71 @@ fn tokenize(input: &str) -> impl Iterator<Item = Token> {
         current_literal_start.unwrap_or_default()
     );
 
-    split_input
-        .into_iter()
-        .flat_map(|token| -> Box<dyn Iterator<Item = Token>> {
-            if let Ok(keyword) = Keyword::try_from(token) {
-                return Box::new(std::iter::once(Token::Keyword(keyword)));
-            }
+    split_input.into_iter().map(|token| -> Token {
+        if token == SEMICOLON {
+            return Token::Semicolon();
+        }
 
-            if let Some(x) = Operator::iter()
-                .filter(|op| *op != Operator::Dot)
-                .find_map(|op| tokenize_operator(token, op))
-            {
-                return x;
-            }
+        if let Ok(keyword) = Keyword::try_from(token) {
+            return Token::Keyword(keyword);
+        }
 
-            match Literal::from_str(token) {
-                Ok(literal) => return Box::new(std::iter::once(Token::Literal(literal))),
-                Err(ParseLiteralError::NotALiteral) => {}
-                Err(e) => panic!("{e:?}"),
+        for op in Operator::iter() {
+            if token == op.as_str() {
+                return Token::Op(op);
             }
+        }
 
-            if let Some(x) = tokenize_operator(token, Operator::Dot) {
-                return x;
-            }
+        match Literal::from_str(token) {
+            Ok(literal) => return Token::Literal(literal),
+            Err(ParseLiteralError::NotALiteral) => {}
+            Err(e) => panic!("{e:?}"),
+        }
 
-            Box::new(std::iter::once(Token::Variable(Variable::new(
-                token.to_string(),
-            ))))
-        })
+        Token::Variable(Variable::new(token.to_string()))
+    })
 }
 
-fn tokenize_operator(
-    token: &str,
-    operator: Operator,
-) -> Option<Box<dyn Iterator<Item = Token> + '_>> {
-    let operator_str: &str = operator.into();
-    let op_pos = token.find(operator_str)?;
+fn split_special_operators(parsing_str: &str) -> Vec<&str> {
+    let tokens = std::iter::once(SEMICOLON).chain(Operator::iter().map(Operator::as_str));
 
-    Some(Box::new(
-        tokenize(&token[..op_pos])
-            .chain([Token::Op(operator)])
-            .chain(tokenize(&token[(op_pos + operator_str.len())..])),
-    ))
+    for token_str in tokens {
+        let Some(op_pos) = parsing_str.find(token_str) else {
+            continue;
+        };
+
+        if token_str == Operator::Dot.as_str() && parse_float(parsing_str).is_ok() {
+            continue;
+        }
+
+        return [
+            split_special_operators(&parsing_str[..op_pos]),
+            vec![token_str],
+            split_special_operators(&parsing_str[(op_pos + token_str.len())..]),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+    }
+
+    vec![parsing_str]
 }
 
 #[derive(Debug, Clone, Display, PartialEq)]
 pub enum Token {
+    #[strum(to_string = "{0}")]
     Keyword(Keyword),
+    #[strum(to_string = "{0}")]
     Op(Operator),
+    #[strum(to_string = "{0}")]
     Literal(Literal),
+    #[strum(to_string = "{0}")]
     Variable(Variable),
+    #[strum(to_string = "{SEMICOLON}")]
+    Semicolon(),
 }
+
+const SEMICOLON: &str = ";";
 
 #[derive(Debug, Clone, EnumString, Display, PartialEq, Eq)]
 #[strum(serialize_all = "lowercase")]
@@ -140,6 +155,8 @@ pub enum Keyword {
     While,
     For,
     Match,
+
+    Void,
 
     Return,
     Continue,

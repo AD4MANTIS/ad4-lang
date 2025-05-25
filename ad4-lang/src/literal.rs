@@ -1,4 +1,4 @@
-use std::{fmt::Display, str::FromStr};
+use std::{fmt::Display, num::ParseFloatError, str::FromStr};
 
 use crate::{TokenError, Value};
 
@@ -20,16 +20,9 @@ impl FromStr for Literal {
         match value.chars().next().unwrap_or(' ') {
             '0'..='9' => {
                 let n = value;
-                if n.contains('.') {
-                    #[allow(clippy::option_if_let_else)]
-                    if let Some(f) = n.strip_suffix('f') {
-                        f.parse().map(Value::F32).map_err(TokenError::from)
-                    } else {
-                        n.trim_end_matches('d')
-                            .parse()
-                            .map(Value::F64)
-                            .map_err(TokenError::from)
-                    }
+
+                if n.contains('.') || n.ends_with(['f', 'd']) {
+                    parse_float(n).map_err(TokenError::from)
                 } else if let Some(n) = n.strip_suffix("i32") {
                     n.parse().map(Value::I32).map_err(TokenError::from)
                 } else if let Some(n) = n.strip_suffix("u32") {
@@ -55,6 +48,15 @@ impl FromStr for Literal {
         }
         .map(Literal)
         .map_err(ParseLiteralError::from)
+    }
+}
+
+pub fn parse_float(n: &str) -> Result<Value, ParseFloatError> {
+    #[allow(clippy::option_if_let_else)]
+    if let Some(f) = n.strip_suffix('f') {
+        f.parse().map(Value::F32)
+    } else {
+        n.trim_end_matches('d').parse().map(Value::F64)
     }
 }
 
