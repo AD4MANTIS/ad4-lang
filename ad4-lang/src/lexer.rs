@@ -1,8 +1,6 @@
-use std::str::FromStr;
+use strum::IntoEnumIterator;
 
-use strum::{Display, IntoEnumIterator};
-
-use crate::{Keyword, Literal, Operator, ParseLiteralError, Variable, literal::parse_float};
+use crate::{Operator, SEMICOLON, Token, TokenError, literal::parse_float};
 
 pub struct Lexer {
     tokens: Vec<Token>,
@@ -35,16 +33,6 @@ impl Iterator for Lexer {
     fn next(&mut self) -> Option<Self::Item> {
         self.tokens.pop()
     }
-}
-
-#[derive(thiserror::Error, Debug)]
-pub enum TokenError {
-    #[error(transparent)]
-    ParseFloat(#[from] std::num::ParseFloatError),
-    #[error(transparent)]
-    ParseInt(#[from] std::num::ParseIntError),
-    #[error("chars must contain exactly one character")]
-    InvalidCharLength,
 }
 
 fn tokenize(input: &str) -> impl Iterator<Item = Result<Token, TokenError>> {
@@ -111,46 +99,4 @@ fn split_special_operators(parsing_str: &str) -> Vec<&str> {
     }
 
     vec![parsing_str]
-}
-
-#[derive(Debug, Clone, Display, PartialEq)]
-pub enum Token {
-    #[strum(to_string = "{0}")]
-    Keyword(Keyword),
-    #[strum(to_string = "{0}")]
-    Op(Operator),
-    #[strum(to_string = "{0}")]
-    Literal(Literal),
-    #[strum(to_string = "{0}")]
-    Variable(Variable),
-    #[strum(to_string = "{SEMICOLON}")]
-    Semicolon(),
-}
-
-const SEMICOLON: &str = ";";
-
-impl FromStr for Token {
-    type Err = TokenError;
-
-    fn from_str(token: &str) -> Result<Self, Self::Err> {
-        if token == SEMICOLON {
-            return Ok(Self::Semicolon());
-        }
-
-        if let Ok(keyword) = Keyword::try_from(token) {
-            return Ok(Self::Keyword(keyword));
-        }
-
-        for op in Operator::iter() {
-            if token == op.as_str() {
-                return Ok(Self::Op(op));
-            }
-        }
-
-        Ok(match Literal::from_str(token) {
-            Ok(literal) => Self::Literal(literal),
-            Err(ParseLiteralError::NotALiteral) => Self::Variable(Variable::new(token.to_string())),
-            Err(ParseLiteralError::Token(e)) => return Err(e),
-        })
-    }
 }

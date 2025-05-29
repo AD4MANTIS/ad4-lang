@@ -12,6 +12,7 @@ mod literal;
 mod operator;
 mod prelude;
 mod statement;
+mod token;
 mod value;
 mod variable;
 
