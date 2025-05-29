@@ -1,6 +1,9 @@
 use std::str::FromStr;
 
+#[cfg(test)]
+use crate::Value;
 use crate::{Keyword, Literal, Operator, ParseLiteralError, Variable};
+
 use strum::{Display, IntoEnumIterator};
 
 pub const SEMICOLON: &str = ";";
@@ -20,6 +23,7 @@ pub enum Token {
 }
 
 #[derive(thiserror::Error, Debug)]
+#[cfg_attr(test, derive(PartialEq, Eq))]
 pub enum TokenError {
     #[error(transparent)]
     ParseFloat(#[from] std::num::ParseFloatError),
@@ -38,7 +42,7 @@ impl FromStr for Token {
         }
 
         if let Ok(keyword) = Keyword::try_from(token) {
-            return Ok(Self::Keyword(keyword));
+            return Ok(Self::kw(keyword));
         }
 
         for op in Operator::iter() {
@@ -49,8 +53,104 @@ impl FromStr for Token {
 
         Ok(match Literal::from_str(token) {
             Ok(literal) => Self::Literal(literal),
-            Err(ParseLiteralError::NotALiteral) => Self::Variable(Variable::new(token.to_string())),
+            Err(ParseLiteralError::NotALiteral) => Self::var(token),
             Err(ParseLiteralError::Token(e)) => return Err(e),
         })
+    }
+}
+
+impl Token {
+    pub const fn kw(kw: Keyword) -> Self {
+        Self::Keyword(kw)
+    }
+
+    #[cfg(test)]
+    pub const fn literal(val: Value) -> Self {
+        Self::Literal(Literal(val))
+    }
+
+    pub fn var(name: &str) -> Self {
+        Self::Variable(Variable::new(name.to_string()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    macro_rules! expect_error {
+        ($input:expr, $expected:pat) => {
+            let expr = Token::from_str($input).unwrap_err();
+            assert!(
+                matches!(&expr, $expected),
+                "Input: {}\nExpected: {:?}\nActual: {:?}",
+                $input,
+                stringify!($expected),
+                &expr
+            );
+        };
+    }
+
+    #[test]
+    fn semicolon() {
+        assert_eq!(Token::from_str(";"), Ok(Token::Semicolon()));
+    }
+
+    #[test]
+    fn char() {
+        assert_eq!(Token::from_str("'a'"), Ok(Token::literal('a'.into())));
+    }
+
+    #[test]
+    fn float() {
+        assert_eq!(Token::from_str("1.0"), Ok(Token::literal(1.0.into())));
+    }
+
+    #[test]
+    fn string() {
+        assert_eq!(
+            Token::from_str(r#""Hi""#),
+            Ok(Token::literal("Hi".to_string().into()))
+        );
+    }
+
+    #[test]
+    fn number() {
+        assert_eq!(Token::from_str("1"), Ok(Token::literal(1.into())));
+    }
+
+    #[test]
+    fn keyword() {
+        assert_eq!(Token::from_str("let"), Ok(Token::kw(Keyword::Let)));
+    }
+
+    #[test]
+    fn operator() {
+        for op in Operator::iter() {
+            assert_eq!(Token::from_str(op.as_str()), Ok(Token::Op(op)));
+        }
+    }
+
+    #[test]
+    fn variable() {
+        assert_eq!(Token::from_str("a"), Ok(Token::var("a")));
+    }
+
+    #[test]
+    fn invalid_char_length() {
+        expect_error!("'a", TokenError::InvalidCharLength);
+        expect_error!("''", TokenError::InvalidCharLength);
+        expect_error!("'1a'", TokenError::InvalidCharLength);
+    }
+
+    #[test]
+    fn invalid() {
+        expect_error!("1a", TokenError::ParseInt(..));
+        expect_error!("1e1a", TokenError::ParseInt(..));
+        expect_error!("1a", TokenError::ParseInt(..));
+        expect_error!("1a", TokenError::ParseInt(..));
+        expect_error!("1.2a", TokenError::ParseFloat(..));
+        expect_error!("1.a", TokenError::ParseFloat(..));
+        expect_error!("1ad", TokenError::ParseFloat(..));
     }
 }

@@ -17,8 +17,8 @@ impl FromStr for Literal {
     type Err = ParseLiteralError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
-        match value.chars().next().unwrap_or(' ') {
-            '0'..='9' => {
+        Ok(Self(match value.as_bytes() {
+            [b'0'..=b'9', ..] => {
                 let n = value;
 
                 if n.contains('.') || n.ends_with(['f', 'd']) {
@@ -34,20 +34,23 @@ impl FromStr for Literal {
                         .parse()
                         .map(Value::I64)
                         .map_err(TokenError::from)
-                }
+                }?
             }
-            '\'' => value
-                .chars()
-                .nth(1)
-                .map(Value::Char)
-                .ok_or(TokenError::InvalidCharLength),
-            '\"' => Ok(Value::String(value[1..value.len() - 1].to_string())),
-            _ if value == "true" => Ok(true.into()),
-            _ if value == "false" => Ok(false.into()),
+            [b'\'', .., b'\''] => {
+                let char = &value[1..value.len() - 1];
+
+                if char.len() != 1 {
+                    Err(TokenError::InvalidCharLength)?;
+                }
+
+                Value::Char(char.chars().next().unwrap())
+            }
+            [b'\'', ..] => Err(TokenError::InvalidCharLength)?,
+            [b'\"', .., b'\"'] => Value::String(value[1..value.len() - 1].to_string()),
+            _ if value == "true" => true.into(),
+            _ if value == "false" => false.into(),
             _ => return Err(ParseLiteralError::NotALiteral),
-        }
-        .map(Literal)
-        .map_err(ParseLiteralError::from)
+        }))
     }
 }
 

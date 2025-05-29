@@ -7,6 +7,7 @@ pub struct Lexer {
 }
 
 #[derive(thiserror::Error, Debug)]
+#[cfg_attr(test, derive(PartialEq, Eq))]
 pub enum TokenizeError {
     #[error(transparent)]
     Token(#[from] TokenError),
@@ -99,4 +100,184 @@ fn split_special_operators(parsing_str: &str) -> Vec<&str> {
     }
 
     vec![parsing_str]
+}
+
+#[cfg(test)]
+mod tokenize_test {
+    use super::*;
+
+    use crate::{Keyword, Operator};
+
+    fn test_tokenize(input: &str, expected: &[Token]) {
+        let expr = tokenize(input).collect::<Result<Vec<_>, _>>().unwrap();
+        assert_eq!(
+            expr, expected,
+            "Input: {input}\nExpected: {expected:#?}\nActual: {expr:#?}"
+        );
+    }
+
+    #[test]
+    fn numbers() {
+        test_tokenize("1", &[Token::literal(1.into())]);
+    }
+
+    #[test]
+    fn keywords() {
+        test_tokenize("let", &[Token::kw(Keyword::Let)]);
+    }
+
+    #[test]
+    fn operators() {
+        test_tokenize("+", &[Token::Op(Operator::Add)]);
+    }
+
+    #[test]
+    fn expressions() {
+        test_tokenize(
+            "1 + 2",
+            &[
+                Token::literal(1.into()),
+                Token::Op(Operator::Add),
+                Token::literal(2.into()),
+            ],
+        );
+    }
+
+    #[test]
+    fn variables() {
+        test_tokenize("a", &[Token::var("a")]);
+    }
+
+    #[test]
+    fn semicolon() {
+        test_tokenize(";", &[Token::Semicolon()]);
+    }
+
+    #[test]
+    fn multiple_tokens() {
+        test_tokenize(
+            "let a = 1;",
+            &[
+                Token::kw(Keyword::Let),
+                Token::var("a"),
+                Token::Op(Operator::Assign),
+                Token::literal(1.into()),
+                Token::Semicolon(),
+            ],
+        );
+    }
+
+    #[test]
+    fn multiple_tokens_with_semicolons() {
+        test_tokenize(
+            "let a = 1;; let b = 2;",
+            &[
+                Token::kw(Keyword::Let),
+                Token::var("a"),
+                Token::Op(Operator::Assign),
+                Token::literal(1.into()),
+                Token::Semicolon(),
+                Token::Semicolon(),
+                Token::kw(Keyword::Let),
+                Token::var("b"),
+                Token::Op(Operator::Assign),
+                Token::literal(2.into()),
+                Token::Semicolon(),
+            ],
+        );
+    }
+
+    #[test]
+    fn braced_expressions() {
+        test_tokenize(
+            "(1 + 2)",
+            &[
+                Token::Op(Operator::OpeningBracket),
+                Token::literal(1.into()),
+                Token::Op(Operator::Add),
+                Token::literal(2.into()),
+                Token::Op(Operator::ClosingBracket),
+            ],
+        );
+    }
+
+    #[test]
+    fn nested_braces() {
+        test_tokenize(
+            "((1 + 2))",
+            &[
+                Token::Op(Operator::OpeningBracket),
+                Token::Op(Operator::OpeningBracket),
+                Token::literal(1.into()),
+                Token::Op(Operator::Add),
+                Token::literal(2.into()),
+                Token::Op(Operator::ClosingBracket),
+                Token::Op(Operator::ClosingBracket),
+            ],
+        );
+    }
+
+    #[test]
+    fn blocks() {
+        test_tokenize(
+            "{ -1 + 2 }",
+            &[
+                Token::Op(Operator::OpeningCurlyBrace),
+                Token::Op(Operator::Sub),
+                Token::literal(1.into()),
+                Token::Op(Operator::Add),
+                Token::literal(2.into()),
+                Token::Op(Operator::ClosingCurlyBrace),
+            ],
+        );
+    }
+
+    #[test]
+    fn nested_blocks() {
+        test_tokenize(
+            "{ let a = { 1 + 2 } }",
+            &[
+                Token::Op(Operator::OpeningCurlyBrace),
+                Token::kw(Keyword::Let),
+                Token::var("a"),
+                Token::Op(Operator::Assign),
+                Token::Op(Operator::OpeningCurlyBrace),
+                Token::literal(1.into()),
+                Token::Op(Operator::Add),
+                Token::literal(2.into()),
+                Token::Op(Operator::ClosingCurlyBrace),
+                Token::Op(Operator::ClosingCurlyBrace),
+            ],
+        );
+    }
+
+    #[test]
+    fn nested_blocks_with_braces() {
+        test_tokenize(
+            "{ let a = ( 1 + 2 ); { let b = ( 3 * 4 ) } }",
+            &[
+                Token::Op(Operator::OpeningCurlyBrace),
+                Token::kw(Keyword::Let),
+                Token::var("a"),
+                Token::Op(Operator::Assign),
+                Token::Op(Operator::OpeningBracket),
+                Token::literal(1.into()),
+                Token::Op(Operator::Add),
+                Token::literal(2.into()),
+                Token::Op(Operator::ClosingBracket),
+                Token::Semicolon(),
+                Token::Op(Operator::OpeningCurlyBrace),
+                Token::kw(Keyword::Let),
+                Token::var("b"),
+                Token::Op(Operator::Assign),
+                Token::Op(Operator::OpeningBracket),
+                Token::literal(3.into()),
+                Token::Op(Operator::Mul),
+                Token::literal(4.into()),
+                Token::Op(Operator::ClosingBracket),
+                Token::Op(Operator::ClosingCurlyBrace),
+                Token::Op(Operator::ClosingCurlyBrace),
+            ],
+        );
+    }
 }
