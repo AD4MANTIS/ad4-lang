@@ -79,3 +79,14 @@ impl Statement {
         }
     }
 }
+
+impl Display for Statement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Expr(expression) => expression.fmt(f),
+            Self::Declaration(variable, expression) => {
+                write!(f, "let {variable} = {expression}")
+            }
+        }
+    }
+}

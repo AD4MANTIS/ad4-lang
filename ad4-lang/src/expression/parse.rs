@@ -3,7 +3,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::{Lexer, Literal, Operator, Token, TokenizeError, Value};
+use crate::{Lexer, Literal, Operator, Token, TokenizeError, Value, prelude::Statement, statement};
 
 use super::Expression;
 
@@ -33,6 +33,8 @@ pub enum ParseError {
     },
     #[error("Unexpected end of expression")]
     UnexpectedEndOfExpression,
+    #[error(transparent)]
+    Statement(#[from] Box<statement::ParseError>),
 }
 
 impl FromStr for Expression {
@@ -57,31 +59,42 @@ impl Expression {
                     found: Box::new(keyword),
                 });
             }
-            Token::Op(bracket @ (Operator::OpeningBracket | Operator::OpeningCurlyBrace)) => {
+            Token::Op(bracket @ Operator::OpeningBracket) => {
                 let expr = Self::parse(lexer, bracket.infix_binding_power().1)?;
 
-                let Some(found_closing_bracket) = lexer.next() else {
-                    return Err(ParseError::MissingClosingDelimiter {
-                        for_opening: bracket,
-                    });
-                };
-
-                let expected_closing_bracket = if bracket == Operator::OpeningBracket {
-                    Operator::ClosingBracket
-                } else {
-                    Operator::ClosingCurlyBrace
-                };
-
-                if found_closing_bracket != Token::Op(expected_closing_bracket) {
-                    return Err(ParseError::MismatchedClosingDelimiter {
-                        opening: bracket,
-                        expected: expected_closing_bracket,
-                        found: found_closing_bracket,
-                    });
-                }
+                expect_closing_bracket(lexer, bracket)?;
 
                 expr
             }
+            Token::Op(bracket @ Operator::OpeningCurlyBrace) => {
+                let mut statements = vec![];
+
+                let expr = loop {
+                    if lexer.peek()
+                        == Some(&Token::Op(
+                            bracket.get_closing_bracket().expect("should be a bracket"),
+                        ))
+                    {
+                        break None;
+                    }
+
+                    let statement = Statement::parse(lexer).map_err(Box::new)?;
+
+                    if let Statement::Expr(expr) = statement {
+                        break Some(expr);
+                    }
+
+                    statements.push(statement);
+                };
+
+                expect_closing_bracket(lexer, bracket)?;
+
+                Self::Block {
+                    statements,
+                    result_expr: expr.map(Box::new),
+                }
+            }
+            // Prefix operators
             Token::Op(operator @ (Operator::Add | Operator::Sub)) => Self::operation(
                 Self::Literal(Literal(Value::I64(0))),
                 operator,
@@ -112,7 +125,7 @@ impl Expression {
             };
 
             let infix_binding_power = operator.infix_binding_power();
-            if infix_binding_power.0 < binding_power_lhs {
+            if infix_binding_power.0 <= binding_power_lhs {
                 break;
             }
             lexer.next();
@@ -124,4 +137,23 @@ impl Expression {
 
         Ok(lhs)
     }
+}
+
+fn expect_closing_bracket(lexer: &mut Lexer, bracket: Operator) -> Result<(), ParseError> {
+    let expected_closing_bracket = bracket.get_closing_bracket().expect("should be a bracket");
+
+    let Some(found_closing_bracket) = lexer.next() else {
+        return Err(ParseError::MissingClosingDelimiter {
+            for_opening: bracket,
+        });
+    };
+
+    if found_closing_bracket != Token::Op(expected_closing_bracket) {
+        return Err(ParseError::MismatchedClosingDelimiter {
+            opening: bracket,
+            expected: expected_closing_bracket,
+            found: found_closing_bracket,
+        });
+    }
+    Ok(())
 }

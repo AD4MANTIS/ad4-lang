@@ -25,9 +25,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut input = String::new();
     loop {
         input.clear();
-        print!(">> ");
-        stdout().flush().unwrap();
-        stdin().read_line(&mut input).unwrap();
+
+        loop {
+            print!(">> ");
+            stdout().flush().unwrap();
+            stdin().read_line(&mut input).unwrap();
+
+            if are_brackets_closed(&input, Operator::OpeningBracket)
+                && are_brackets_closed(&input, Operator::OpeningCurlyBrace)
+            {
+                break;
+            }
+        }
 
         if input.trim() == "exit" {
             break;
@@ -61,4 +70,16 @@ fn print_cond<T: std::fmt::Display + std::fmt::Debug>(val: T, debug: bool) {
     } else {
         println!("{val}");
     }
+}
+
+fn are_brackets_closed(input: &str, opening: Operator) -> bool {
+    input.matches(opening.as_str()).count()
+        == input
+            .matches(
+                opening
+                    .get_closing_bracket()
+                    .expect("should be a bracket")
+                    .as_str(),
+            )
+            .count()
 }

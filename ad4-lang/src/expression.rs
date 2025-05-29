@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display};
 pub use eval::EvalError;
 pub use parse::ParseError;
 
-use crate::{Literal, Operator, Variable};
+use crate::{Literal, Operator, Statement, Variable};
 
 mod eval;
 mod parse;
@@ -20,7 +20,10 @@ pub enum Expression {
         lhs: Box<Expression>,
         rhs: Box<Expression>,
     },
-    // Block(Vec<Statement>, Option<Box<Expression>>),
+    Block {
+        statements: Vec<Statement>,
+        result_expr: Option<Box<Expression>>,
+    },
 }
 
 impl Expression {
@@ -51,6 +54,30 @@ impl Display for Expression {
             Self::Literal(literal) => write!(f, "{literal}"),
             Self::Variable(var) => write!(f, "{}", var.name),
             Self::Operation { operator, lhs, rhs } => write!(f, "({operator} {lhs} {rhs})"),
+            Self::Block {
+                statements,
+                result_expr,
+            } => match (statements.as_slice(), result_expr) {
+                ([], None) => write!(f, "{{ }}"),
+                ([], Some(expr)) => write!(f, "{{ {expr} }}"),
+                (_, _) => {
+                    const INDENT: &str = "    ";
+
+                    writeln!(f, "{{")?;
+
+                    for statement in statements {
+                        writeln!(f, "{INDENT}{statement};")?;
+                    }
+
+                    if let Some(expr) = result_expr {
+                        write!(f, "{INDENT}{expr}",)?;
+                    }
+
+                    writeln!(f)?;
+
+                    write!(f, "}}")
+                }
+            },
         }
     }
 }

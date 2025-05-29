@@ -81,6 +81,7 @@ macro_rules! impl_eq {
 }
 
 impl_eq!(String, Char, I64, U64, I32, U32, F64, F32, Bool & {
+    (Self::Void, Self::Void) => true,
     (Self::I64(lhs), Self::U32(rhs)) => *lhs == i64::from(*rhs),
     (Self::U32(lhs), Self::I64(rhs)) => i64::from(*lhs) == *rhs,
 

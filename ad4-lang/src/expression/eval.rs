@@ -46,6 +46,18 @@ impl Expression {
                     ))),
                 }
             }
+            Self::Block {
+                statements,
+                result_expr,
+            } => {
+                for statement in statements {
+                    statement.execute(variables)?;
+                }
+
+                result_expr
+                    .as_ref()
+                    .map_or(Ok(Value::Void), |expr| expr.eval(variables))
+            }
         }
     }
 }

@@ -79,8 +79,6 @@ expr_cases! { variables
     left_associative_add: "1 + 2 + 3" => "(+ (+ 1 2) 3)" => 6,
     left_associative_mul_numbers: "1 * 2 * 3" => "(* (* 1 2) 3)" => 6,
     parens_around_number: "((1))" => "1" => 1,
-    curly: "{ 1 }" => "1" => 1,
-    curly_no_space: "{1+2} + 3" => "(+ (+ 1 2) 3)" => 6,
     add_with_parens_right: "a + (b + c)" => "(+ a (+ b c))" => 6,
     mul_with_parens_both: "(a + b) * (c + d)" => "(* (+ a b) (+ c d))" => 7,
     div_then_mul_zero: "a / b * c" => "(* (/ a b) c)" => 0,
@@ -102,4 +100,20 @@ expr_cases! { equality
     boolean_neq: "true != false" => "(!= true false)" => true,
     number_eq: "1 == 3" => "(== 1 3)" => false,
     sub_expr_eq: "(1 + 2) * 3 == 10 - 1" => "(== (* (+ 1 2) 3) (- 10 1))" => true,
+}
+
+expr_cases! { blocks
+    curly: "{ 1 }" => "{ 1 }" => 1,
+    curly_no_space: "{1+2} + 3" => "(+ { (+ 1 2) } 3)" => 6,
+    multiple_statements: "{
+        let x = 1;
+        let y = 2;
+        x + y
+    }" => r"{
+    let x = 1;
+    let y = 2;
+    (+ x y)
+}" => 3,
+
+    empty_block: "{}" => "{ }" => (),
 }

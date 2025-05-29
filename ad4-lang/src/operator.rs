@@ -20,19 +20,20 @@ pub enum Operator {
 
 impl From<Operator> for &'static str {
     fn from(value: Operator) -> Self {
+        type Op = Operator;
         match value {
-            Operator::Add => "+",
-            Operator::Sub => "-",
-            Operator::Mul => "*",
-            Operator::Div => "/",
-            Operator::Eq => "==",
-            Operator::Neq => "!=",
-            Operator::Assign => "=",
-            Operator::OpeningBracket => "(",
-            Operator::ClosingBracket => ")",
-            Operator::OpeningCurlyBrace => "{",
-            Operator::ClosingCurlyBrace => "}",
-            Operator::Dot => ".",
+            Op::Add => "+",
+            Op::Sub => "-",
+            Op::Mul => "*",
+            Op::Div => "/",
+            Op::Eq => "==",
+            Op::Neq => "!=",
+            Op::Assign => "=",
+            Op::OpeningBracket => "(",
+            Op::ClosingBracket => ")",
+            Op::OpeningCurlyBrace => "{",
+            Op::ClosingCurlyBrace => "}",
+            Op::Dot => ".",
         }
     }
 }
@@ -61,5 +62,13 @@ impl Operator {
             Self::ClosingBracket | Self::ClosingCurlyBrace => (0, 0),
             Self::Dot => (20, 21),
         }
+    }
+
+    pub const fn get_closing_bracket(self) -> Option<Self> {
+        Some(match self {
+            Self::OpeningBracket => Self::ClosingBracket,
+            Self::OpeningCurlyBrace => Self::ClosingCurlyBrace,
+            _ => return None,
+        })
     }
 }
