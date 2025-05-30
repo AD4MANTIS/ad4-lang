@@ -4,6 +4,7 @@ use thiserror::Error;
 
 use crate::{
     EvalError, Expression, Keyword, Lexer, Literal, Operator, Token, Value, Variable, expression,
+    expression::Eval, keyword,
 };
 
 #[derive(Debug, Clone)]
@@ -14,8 +15,7 @@ pub enum Statement {
 
 fn error_found_unexpected_extra_text<T: Display>(found: Option<&T>) -> String {
     found
-        .as_ref()
-        .map(|token| format!(",found {token}"))
+        .map(|token| format!(", found {token}"))
         .unwrap_or_default()
 }
 
@@ -26,41 +26,14 @@ pub enum ParseError {
     #[error("Expected variable name{}", error_found_unexpected_extra_text(.found.as_ref()))]
     ExpectedVariableName { found: Option<Token> },
     #[error("Expected `{token}`{}", error_found_unexpected_extra_text(.found.as_ref()))]
-    Expected { token: Token, found: Option<Token> },
+    ExpectedToken { token: Token, found: Option<Token> },
 }
 
 impl Statement {
     pub fn parse(lexer: &mut Lexer) -> Result<Self, ParseError> {
-        macro_rules! expect_token {
-            ($token:expr) => {
-                let token = lexer.next();
-                if Some($token) != token {
-                    return Err(ParseError::Expected {
-                        token: $token,
-                        found: token,
-                    });
-                };
-            };
-        }
-
         Ok(match lexer.peek() {
-            Some(Token::Keyword(Keyword::Let)) => {
-                lexer.next();
-
-                let var = match lexer.next() {
-                    Some(Token::Variable(var)) => var,
-                    rest => {
-                        return Err(ParseError::ExpectedVariableName { found: rest });
-                    }
-                };
-
-                expect_token!(Token::Op(Operator::Assign));
-
-                let declaration = Self::Declaration(var, Expression::parse(lexer, 0)?);
-
-                expect_token!(Token::Semicolon());
-
-                declaration
+            Some(Token::Keyword(Keyword::Declaration(declaration))) => {
+                parse_declaration_statement(lexer, *declaration)?
             }
             Some(_) => Self::Expr(Expression::parse(lexer, 0)?),
             None => Self::Expr(Expression::Literal(Literal(Value::Void))),
@@ -78,6 +51,45 @@ impl Statement {
             }
         }
     }
+}
+
+fn parse_declaration_statement(
+    lexer: &mut Lexer,
+    declaration: keyword::Declaration,
+) -> Result<Statement, ParseError> {
+    macro_rules! consume_next_token {
+        ($token:expr) => {
+            let token = lexer.next();
+            if Some($token) != token {
+                return Err(ParseError::ExpectedToken {
+                    token: $token,
+                    found: token,
+                });
+            };
+        };
+    }
+
+    Ok(match declaration {
+        keyword::Declaration::Let => {
+            lexer.next();
+
+            let var = match lexer.next() {
+                Some(Token::Variable(var)) => var,
+                rest => {
+                    return Err(ParseError::ExpectedVariableName { found: rest });
+                }
+            };
+
+            consume_next_token!(Token::Op(Operator::Assign));
+
+            let declaration = Statement::Declaration(var, Expression::parse(lexer, 0)?);
+
+            consume_next_token!(Token::Semicolon());
+
+            declaration
+        }
+        _ => todo!(),
+    })
 }
 
 impl Display for Statement {

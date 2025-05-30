@@ -26,6 +26,10 @@ impl Lexer {
     pub fn peek(&self) -> Option<&Token> {
         self.tokens.last()
     }
+
+    pub fn is_next(&self, token: &Token) -> bool {
+        self.peek() == Some(token)
+    }
 }
 
 impl Iterator for Lexer {
@@ -123,7 +127,7 @@ mod tokenize_test {
 
     #[test]
     fn keywords() {
-        test_tokenize("let", &[Token::kw(Keyword::Let)]);
+        test_tokenize("let", &[Token::kw(Keyword::let_())]);
     }
 
     #[test]
@@ -158,7 +162,7 @@ mod tokenize_test {
         test_tokenize(
             "let a = 1;",
             &[
-                Token::kw(Keyword::Let),
+                Token::kw(Keyword::let_()),
                 Token::var("a"),
                 Token::Op(Operator::Assign),
                 Token::literal(1.into()),
@@ -172,13 +176,13 @@ mod tokenize_test {
         test_tokenize(
             "let a = 1;; let b = 2;",
             &[
-                Token::kw(Keyword::Let),
+                Token::kw(Keyword::let_()),
                 Token::var("a"),
                 Token::Op(Operator::Assign),
                 Token::literal(1.into()),
                 Token::Semicolon(),
                 Token::Semicolon(),
-                Token::kw(Keyword::Let),
+                Token::kw(Keyword::let_()),
                 Token::var("b"),
                 Token::Op(Operator::Assign),
                 Token::literal(2.into()),
@@ -238,7 +242,7 @@ mod tokenize_test {
             "{ let a = { 1 + 2 } }",
             &[
                 Token::Op(Operator::OpeningCurlyBrace),
-                Token::kw(Keyword::Let),
+                Token::kw(Keyword::let_()),
                 Token::var("a"),
                 Token::Op(Operator::Assign),
                 Token::Op(Operator::OpeningCurlyBrace),
@@ -257,7 +261,7 @@ mod tokenize_test {
             "{ let a = ( 1 + 2 ); { let b = ( 3 * 4 ) } }",
             &[
                 Token::Op(Operator::OpeningCurlyBrace),
-                Token::kw(Keyword::Let),
+                Token::kw(Keyword::let_()),
                 Token::var("a"),
                 Token::Op(Operator::Assign),
                 Token::Op(Operator::OpeningBracket),
@@ -267,7 +271,7 @@ mod tokenize_test {
                 Token::Op(Operator::ClosingBracket),
                 Token::Semicolon(),
                 Token::Op(Operator::OpeningCurlyBrace),
-                Token::kw(Keyword::Let),
+                Token::kw(Keyword::let_()),
                 Token::var("b"),
                 Token::Op(Operator::Assign),
                 Token::Op(Operator::OpeningBracket),

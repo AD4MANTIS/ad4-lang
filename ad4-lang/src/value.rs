@@ -5,9 +5,9 @@ use strum::Display;
 
 #[derive(Debug, Display, Clone, From)]
 pub enum Value {
-    #[strum(to_string = "{0}")]
+    #[strum(to_string = "\"{0}\"")]
     String(#[from] String),
-    #[strum(to_string = "{0}")]
+    #[strum(to_string = "'{0}'")]
     Char(#[from] char),
     #[strum(to_string = "{0}")]
     I64(#[from] i64),

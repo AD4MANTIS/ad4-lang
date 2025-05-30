@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 #[cfg(test)]
 use crate::Value;
-use crate::{Keyword, Literal, Operator, ParseLiteralError, Variable};
+use crate::{Keyword, Literal, Operator, Variable, literal::ParseError};
 
 use strum::{Display, IntoEnumIterator};
 
@@ -41,7 +41,7 @@ impl FromStr for Token {
             return Ok(Self::Semicolon());
         }
 
-        if let Ok(keyword) = Keyword::try_from(token) {
+        if let Ok(keyword) = Keyword::from_str(token) {
             return Ok(Self::kw(keyword));
         }
 
@@ -53,8 +53,8 @@ impl FromStr for Token {
 
         Ok(match Literal::from_str(token) {
             Ok(literal) => Self::Literal(literal),
-            Err(ParseLiteralError::NotALiteral) => Self::var(token),
-            Err(ParseLiteralError::Token(e)) => return Err(e),
+            Err(ParseError::NotALiteral) => Self::var(token),
+            Err(ParseError::Token(e)) => return Err(e),
         })
     }
 }
@@ -121,7 +121,7 @@ mod tests {
 
     #[test]
     fn keyword() {
-        assert_eq!(Token::from_str("let"), Ok(Token::kw(Keyword::Let)));
+        assert_eq!(Token::from_str("let"), Ok(Token::kw(Keyword::let_())));
     }
 
     #[test]

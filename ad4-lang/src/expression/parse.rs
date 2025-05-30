@@ -3,9 +3,15 @@ use std::{
     str::FromStr,
 };
 
-use crate::{Lexer, Literal, Operator, Token, TokenizeError, Value, prelude::Statement, statement};
+use crate::{
+    Lexer, Literal, Operator, Token, Value,
+    keyword::{self, Keyword},
+    lexer::TokenizeError,
+    prelude::Statement,
+    statement,
+};
 
-use super::Expression;
+use super::{Block, Expression, SimpleIf};
 
 pub trait DisplayDebug: Display + Debug {}
 
@@ -17,11 +23,11 @@ pub enum ParseError {
     Lexer(#[from] TokenizeError),
     #[error("Expected Expression, but there were no tokens left")]
     NoTokensLeft,
-    #[error("Expected {x}, found {y} '{found:?}'")]
+    #[error("Expected {x}, found {found} '{found_item}'")]
     ExpectedXFoundY {
-        x: &'static str,
-        y: &'static str,
+        x: Box<dyn DisplayDebug>,
         found: Box<dyn DisplayDebug>,
+        found_item: Box<dyn DisplayDebug>,
     },
     #[error("Missing closing delimiter for `{for_opening}`")]
     MissingClosingDelimiter { for_opening: Operator },
@@ -35,6 +41,20 @@ pub enum ParseError {
     UnexpectedEndOfExpression,
     #[error(transparent)]
     Statement(#[from] Box<statement::ParseError>),
+}
+
+impl ParseError {
+    fn expected<T: DisplayDebug + 'static, U: DisplayDebug + 'static, V: DisplayDebug + 'static>(
+        x: T,
+        found: U,
+        found_item: V,
+    ) -> Self {
+        Self::ExpectedXFoundY {
+            x: Box::new(x),
+            found: Box::new(found),
+            found_item: Box::new(found_item),
+        }
+    }
 }
 
 impl FromStr for Expression {
@@ -52,12 +72,37 @@ impl Expression {
             Token::Semicolon() => return Err(ParseError::UnexpectedEndOfExpression),
             Token::Variable(v) => Self::Variable(v),
             Token::Literal(literal) => Self::Literal(literal),
+            Token::Keyword(Keyword::Expression(keyword)) => match keyword {
+                keyword::Expression::If => {
+                    let r#if = SimpleIf::parse(lexer)?;
+
+                    let mut elses = vec![];
+                    let r#else = loop {
+                        if !lexer.is_next(&Token::kw(Keyword::else_())) {
+                            break None;
+                        }
+
+                        lexer.next();
+
+                        if lexer.is_next(&Token::kw(Keyword::if_())) {
+                            lexer.next();
+                            elses.push(SimpleIf::parse(lexer)?);
+                        } else {
+                            break Some(Block::parse(lexer, Operator::OpeningCurlyBrace)?);
+                        }
+                    };
+
+                    Self::If(super::If {
+                        condition: r#if.condition,
+                        block: r#if.block,
+                        elses,
+                        r#else,
+                    })
+                }
+                _ => todo!(),
+            },
             Token::Keyword(keyword) => {
-                return Err(ParseError::ExpectedXFoundY {
-                    x: "Expression",
-                    y: "Keyword",
-                    found: Box::new(keyword),
-                });
+                return Err(ParseError::expected("Expression", "Keyword", keyword));
             }
             Token::Op(bracket @ Operator::OpeningBracket) => {
                 let expr = Self::parse(lexer, bracket.infix_binding_power().1)?;
@@ -66,33 +111,8 @@ impl Expression {
 
                 expr
             }
-            Token::Op(bracket @ Operator::OpeningCurlyBrace) => {
-                let mut statements = vec![];
-
-                let expr = loop {
-                    if lexer.peek()
-                        == Some(&Token::Op(
-                            bracket.get_closing_bracket().expect("should be a bracket"),
-                        ))
-                    {
-                        break None;
-                    }
-
-                    let statement = Statement::parse(lexer).map_err(Box::new)?;
-
-                    if let Statement::Expr(expr) = statement {
-                        break Some(expr);
-                    }
-
-                    statements.push(statement);
-                };
-
-                expect_closing_bracket(lexer, bracket)?;
-
-                Self::Block {
-                    statements,
-                    result_expr: expr.map(Box::new),
-                }
+            Token::Op(brace @ Operator::OpeningCurlyBrace) => {
+                Self::Block(Block::parse(lexer, brace)?)
             }
             // Prefix operators
             Token::Op(operator @ (Operator::Add | Operator::Sub)) => Self::operation(
@@ -101,11 +121,7 @@ impl Expression {
                 Self::parse(lexer, operator.infix_binding_power().1)?,
             ),
             Token::Op(operator) => {
-                return Err(ParseError::ExpectedXFoundY {
-                    x: "Expression",
-                    y: "Operator",
-                    found: Box::new(operator),
-                });
+                return Err(ParseError::expected("Expression", "Operator", operator));
             }
         };
 
@@ -116,11 +132,7 @@ impl Expression {
                     break;
                 }
                 Some(token) => {
-                    return Err(ParseError::ExpectedXFoundY {
-                        x: "Operator",
-                        y: "Token",
-                        found: Box::new(token.clone()),
-                    });
+                    return Err(ParseError::expected("Operator", "Token", token.clone()));
                 }
             };
 
@@ -136,6 +148,49 @@ impl Expression {
         }
 
         Ok(lhs)
+    }
+}
+
+impl Block {
+    fn parse(lexer: &mut Lexer, bracket: Operator) -> Result<Self, ParseError> {
+        let closing = Token::Op(bracket.get_closing_bracket().expect("should be a bracket"));
+
+        if lexer.peek() == Some(&Token::Op(bracket)) {
+            lexer.next();
+        }
+
+        let mut statements = vec![];
+
+        let expr = loop {
+            if lexer.peek() == Some(&closing) {
+                break None;
+            }
+
+            let statement = Statement::parse(lexer).map_err(Box::new)?;
+
+            if let Statement::Expr(expr) = statement {
+                break Some(expr);
+            }
+
+            statements.push(statement);
+        };
+
+        expect_closing_bracket(lexer, bracket)?;
+
+        Ok(Self {
+            statements,
+            result_expr: expr.map(Box::new),
+        })
+    }
+}
+
+impl SimpleIf {
+    fn parse(lexer: &mut Lexer) -> Result<Self, ParseError> {
+        let condition = Box::new(Expression::parse(lexer, 0)?);
+
+        let block = Block::parse(lexer, Operator::OpeningCurlyBrace)?;
+
+        Ok(Self { condition, block })
     }
 }
 

@@ -6,7 +6,7 @@ use crate::{TokenError, Value};
 pub struct Literal(pub Value);
 
 #[derive(thiserror::Error, Debug)]
-pub enum ParseLiteralError {
+pub enum ParseError {
     #[error("Token is not a literal")]
     NotALiteral,
     #[error(transparent)]
@@ -14,7 +14,7 @@ pub enum ParseLiteralError {
 }
 
 impl FromStr for Literal {
-    type Err = ParseLiteralError;
+    type Err = ParseError;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         Ok(Self(match value.as_bytes() {
@@ -49,7 +49,7 @@ impl FromStr for Literal {
             [b'\"', .., b'\"'] => Value::String(value[1..value.len() - 1].to_string()),
             _ if value == "true" => true.into(),
             _ if value == "false" => false.into(),
-            _ => return Err(ParseLiteralError::NotALiteral),
+            _ => return Err(ParseError::NotALiteral),
         }))
     }
 }

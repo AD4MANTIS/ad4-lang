@@ -1,6 +1,6 @@
-use std::fmt::{Debug, Display};
+use std::fmt::{Debug, Display, Formatter};
 
-pub use eval::EvalError;
+pub use eval::{Eval, EvalError};
 pub use parse::ParseError;
 
 use crate::{Literal, Operator, Statement, Variable};
@@ -12,6 +12,26 @@ mod parse;
 mod test;
 
 #[derive(Debug, Clone)]
+pub struct Block {
+    pub statements: Vec<Statement>,
+    pub result_expr: Option<Box<Expression>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct If {
+    pub condition: Box<Expression>,
+    pub block: Block,
+    pub elses: Vec<SimpleIf>,
+    pub r#else: Option<Block>,
+}
+
+#[derive(Debug, Clone)]
+pub struct SimpleIf {
+    pub condition: Box<Expression>,
+    pub block: Block,
+}
+
+#[derive(Debug, Clone)]
 pub enum Expression {
     Variable(Variable),
     Literal(Literal),
@@ -20,10 +40,8 @@ pub enum Expression {
         lhs: Box<Expression>,
         rhs: Box<Expression>,
     },
-    Block {
-        statements: Vec<Statement>,
-        result_expr: Option<Box<Expression>>,
-    },
+    Block(Block),
+    If(If),
 }
 
 impl Expression {
@@ -49,35 +67,61 @@ impl From<&'static str> for EvalError {
 }
 
 impl Display for Expression {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Literal(literal) => write!(f, "{literal}"),
             Self::Variable(var) => write!(f, "{}", var.name),
             Self::Operation { operator, lhs, rhs } => write!(f, "({operator} {lhs} {rhs})"),
-            Self::Block {
-                statements,
-                result_expr,
-            } => match (statements.as_slice(), result_expr) {
-                ([], None) => write!(f, "{{ }}"),
-                ([], Some(expr)) => write!(f, "{{ {expr} }}"),
-                (_, _) => {
-                    const INDENT: &str = "    ";
+            Self::Block(block) => write!(f, "{block}"),
+            Self::If(r#if) => write!(f, "{if}"),
+        }
+    }
+}
 
-                    writeln!(f, "{{")?;
+impl Display for If {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "if {} {}", self.condition, self.block)?;
 
-                    for statement in statements {
-                        writeln!(f, "{INDENT}{statement};")?;
-                    }
+        for else_if in &self.elses {
+            write!(f, "\nelse {else_if}")?;
+        }
 
-                    if let Some(expr) = result_expr {
-                        write!(f, "{INDENT}{expr}",)?;
-                    }
+        if let Some(r#else) = &self.r#else {
+            write!(f, "\nelse {else}")?;
+        }
 
-                    writeln!(f)?;
+        Ok(())
+    }
+}
 
-                    write!(f, "}}")
+impl Display for SimpleIf {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "if {} {}", self.condition, self.block)
+    }
+}
+
+impl Display for Block {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match (self.statements.as_slice(), &self.result_expr) {
+            ([], None) => write!(f, "{{ }}"),
+            ([], Some(expr)) => write!(f, "{{ {expr} }}"),
+            (_, _) => {
+                const INDENT: &str = "    ";
+
+                writeln!(f, "{{")?;
+
+                for statement in &self.statements {
+                    writeln!(f, "{INDENT}{statement};")?;
                 }
-            },
+
+                if let Some(expr) = &self.result_expr {
+                    write!(f, "{INDENT}{expr}",)?;
+                }
+
+                writeln!(f)?;
+
+                write!(f, "}}")
+            }
         }
     }
 }
