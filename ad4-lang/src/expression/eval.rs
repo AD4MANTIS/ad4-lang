@@ -30,14 +30,15 @@ impl Eval for Expression {
                 type Op = Operator;
 
                 let rhs = rhs.eval(variables)?;
+                let mut get_lhs = || lhs.eval(variables);
 
                 match operator {
-                    Op::Add => (lhs.eval(variables)? + &rhs).map_err(EvalError::from),
-                    Op::Sub => (lhs.eval(variables)? - &rhs).map_err(EvalError::from),
-                    Op::Mul => (lhs.eval(variables)? * &rhs).map_err(EvalError::from),
-                    Op::Div => (lhs.eval(variables)? / &rhs).map_err(EvalError::from),
-                    Op::Eq => Ok((lhs.eval(variables)? == rhs).into()),
-                    Op::Neq => Ok((lhs.eval(variables)? != rhs).into()),
+                    Op::Add => (get_lhs()? + &rhs).map_err(EvalError::from),
+                    Op::Sub => (get_lhs()? - &rhs).map_err(EvalError::from),
+                    Op::Mul => (get_lhs()? * &rhs).map_err(EvalError::from),
+                    Op::Div => (get_lhs()? / &rhs).map_err(EvalError::from),
+                    Op::Eq => Ok((get_lhs()? == rhs).into()),
+                    Op::Neq => Ok((get_lhs()? != rhs).into()),
                     Op::Assign => match &**lhs {
                         Self::Variable(var) => {
                             variables.insert(var.clone(), rhs.clone());
@@ -45,7 +46,10 @@ impl Eval for Expression {
                         }
                         _ => Err(EvalError::String(format!("Expected Variable, found {lhs}"))),
                     },
-                    Op::Lt | Op::Leq | Op::Gt | Op::Geq => todo!(),
+                    Op::Lt => Ok((get_lhs()? < rhs).into()),
+                    Op::Leq => Ok((get_lhs()? <= rhs).into()),
+                    Op::Gt => Ok((get_lhs()? > rhs).into()),
+                    Op::Geq => Ok((get_lhs()? >= rhs).into()),
                     Op::Dot => todo!(),
                     Op::OpeningBracket
                     | Op::ClosingBracket

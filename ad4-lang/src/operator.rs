@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use strum::EnumIter;
 
+// Operators witch contain other Operator Strings need to be sorted by the longest first
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
 pub enum Operator {
     Add,
@@ -10,10 +11,10 @@ pub enum Operator {
     Div,
     Eq,
     Neq,
-    Lt,
     Leq,
-    Gt,
     Geq,
+    Lt,
+    Gt,
     Assign,
     OpeningBracket,
     ClosingBracket,
@@ -32,10 +33,10 @@ impl From<Operator> for &'static str {
             Op::Div => "/",
             Op::Eq => "==",
             Op::Neq => "!=",
-            Op::Lt => "<",
             Op::Leq => "<=",
-            Op::Gt => ">",
             Op::Geq => ">=",
+            Op::Lt => "<",
+            Op::Gt => ">",
             Op::Assign => "=",
             Op::OpeningBracket => "(",
             Op::ClosingBracket => ")",

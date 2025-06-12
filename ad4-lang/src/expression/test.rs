@@ -23,7 +23,7 @@ fn parse_test_expression(input: &str, expected: &str) -> Expression {
     expr
 }
 
-fn expr(input: &str, expected: &str, result: Option<Value>) {
+fn test_expr(input: &str, expected: &str, result: Option<Value>) {
     let expr = parse_test_expression(input, expected);
 
     if let Some(result) = result {
@@ -52,7 +52,7 @@ macro_rules! expr_cases {
                     let result = Some($result.into());
                 )?
 
-                expr($input, $expected, result);
+                test_expr($input, $expected, result);
             }
         )*
     };
@@ -128,6 +128,15 @@ mod equality {
     }
 }
 
+mod compare {
+    expr_cases! {
+        basic_lt: "1 < 2" => "(< 1 2)" => true,
+        number_lt: "1 < -3" => "(< 1 (- 0 3))" => false,
+        ge: "1 >= 1" => "(>= 1 1)" => true,
+        sub_expr_lt: "(1 + 2) * 3 < 10 - 1" => "(< (* (+ 1 2) 3) (- 10 1))" => false,
+    }
+}
+
 mod blocks {
     expr_cases! {
         curly: "{ 1 }" => "{ 1 }" => 1,
@@ -143,6 +152,11 @@ mod blocks {
 }" => 3,
         empty_block: "{}" => "{ }" => (),
     }
+
+    #[test]
+    fn lt_eq_with_space() {
+        Expression::from_str("1 < = 2").expect_err("`< =` should not be valid");
+    }
 }
 
 mod if_else {
@@ -156,6 +170,7 @@ mod if_else {
 
     #[test]
     fn variable_definition_in_conditional_block() -> Result<(), Box<dyn std::error::Error>> {
+        // TODO: Indenting multiple levels
         let expr = parse_test_expression(
             r#"{
     let a = 2.2;

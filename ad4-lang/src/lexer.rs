@@ -148,6 +148,43 @@ mod tokenize_test {
     }
 
     #[test]
+    fn compare() {
+        test_tokenize(
+            "1 < 2",
+            &[
+                Token::literal(1.into()),
+                Token::Op(Operator::Lt),
+                Token::literal(2.into()),
+            ],
+        );
+    }
+
+    #[test]
+    fn compare_gt_eq() {
+        test_tokenize(
+            "1 >= 2",
+            &[
+                Token::literal(1.into()),
+                Token::Op(Operator::Geq),
+                Token::literal(2.into()),
+            ],
+        );
+    }
+
+    #[test]
+    fn lt_eq_with_space() {
+        test_tokenize(
+            "1 < = 2",
+            &[
+                Token::literal(1.into()),
+                Token::Op(Operator::Lt),
+                Token::Op(Operator::Assign),
+                Token::literal(2.into()),
+            ],
+        );
+    }
+
+    #[test]
     fn variables() {
         test_tokenize("a", &[Token::var("a")]);
     }

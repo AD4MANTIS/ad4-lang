@@ -64,14 +64,14 @@ Op!(Sub<&Self>: sub - ( I64, U64, F64, F32 ));
 Op!(Mul<&Self>: mul * ( I64, U64, F64, F32 ));
 Op!(Div<&Self>: div / ( I64, U64, F64, F32 ));
 
-macro_rules! impl_eq {
+macro_rules! impl_cmp {
     ($($field:ident),+ $(,)? & {
         $($rest:tt)+
     }) => {
-        impl PartialEq for Value {
-            fn eq(&self, other: &Self) -> bool {
+        impl PartialOrd for Value {
+            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
                 match (self, other) {
-                    $((Self::$field(l0), Self::$field(r0)) => l0 == r0,)+
+                    $((Self::$field(lhs), Self::$field(rhs)) => lhs.partial_cmp(rhs),)+
                     $($rest)+
                     (lhs, rhs) => panic!("Invalid Operation. Trying to compare {lhs:?} and {rhs:?}"),
                 }
@@ -80,7 +80,44 @@ macro_rules! impl_eq {
     };
 }
 
-impl_eq!(String, Char, I64, U64, I32, U32, F64, F32, Bool & {
+impl_cmp!(
+    String,
+    Char,
+    I64,
+    U64,
+    I32,
+    U32,
+    F64,
+    F32 & {
+    (Self::Void, Self::Void) => None,
+});
+
+macro_rules! impl_eq {
+    ($($field:ident),+ $(,)? & {
+        $($rest:tt)+
+    }) => {
+        impl PartialEq for Value {
+            fn eq(&self, other: &Self) -> bool {
+                match (self, other) {
+                    $((Self::$field(lhs), Self::$field(rhs)) => lhs == rhs,)+
+                    $($rest)+
+                    (lhs, rhs) => panic!("Invalid Operation. Trying to compare {lhs:?} and {rhs:?}"),
+                }
+            }
+        }
+    };
+}
+
+impl_eq!(
+    String,
+    Char,
+    I64,
+    U64,
+    I32,
+    U32,
+    F64,
+    F32,
+    Bool & {
     (Self::Void, Self::Void) => true,
     (Self::I64(lhs), Self::U32(rhs)) => *lhs == i64::from(*rhs),
     (Self::U32(lhs), Self::I64(rhs)) => i64::from(*lhs) == *rhs,
