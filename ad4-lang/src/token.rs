@@ -53,8 +53,8 @@ impl FromStr for Token {
 
         Ok(match Literal::from_str(token) {
             Ok(literal) => Self::Literal(literal),
-            Err(ParseError::NotALiteral) => Self::var(token),
-            Err(ParseError::Token(e)) => return Err(e),
+            Err(None) => Self::var(token),
+            Err(Some(ParseError::Token(e))) => return Err(e),
         })
     }
 }

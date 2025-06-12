@@ -1,4 +1,4 @@
-use std::{fmt::Display, num::ParseFloatError, str::FromStr};
+use std::{fmt::Display, str::FromStr};
 
 use crate::{TokenError, Value};
 
@@ -7,14 +7,19 @@ pub struct Literal(pub Value);
 
 #[derive(thiserror::Error, Debug)]
 pub enum ParseError {
-    #[error("Token is not a literal")]
-    NotALiteral,
     #[error(transparent)]
     Token(#[from] TokenError),
 }
 
+fn parse<T: std::str::FromStr, TErr: From<T::Err>>(
+    value: &str,
+    map: impl FnOnce(T) -> Value,
+) -> Result<Value, TErr> {
+    value.parse::<T>().map(map).map_err(TErr::from)
+}
+
 impl FromStr for Literal {
-    type Err = ParseError;
+    type Err = Option<ParseError>;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
         Ok(Self(match value.as_bytes() {
@@ -22,44 +27,47 @@ impl FromStr for Literal {
                 let n = value;
 
                 if n.contains('.') || n.ends_with(['f', 'd']) {
-                    parse_float(n).map_err(TokenError::from)
+                    parse_float(n)
                 } else if let Some(n) = n.strip_suffix("i32") {
-                    n.parse().map(Value::I32).map_err(TokenError::from)
+                    parse(n, Value::I32)
                 } else if let Some(n) = n.strip_suffix("u32") {
-                    n.parse().map(Value::U32).map_err(TokenError::from)
+                    parse(n, Value::U32)
+                } else if let Some(n) = n.strip_suffix("i64") {
+                    parse(n, Value::I64)
+                } else if let Some(n) = n.strip_suffix("u64") {
+                    parse(n, Value::U64)
                 } else if let Some(n) = n.strip_suffix('u') {
-                    n.parse().map(Value::U64).map_err(TokenError::from)
+                    parse(n, Value::U64)
                 } else {
-                    n.trim_end_matches('i')
-                        .parse()
-                        .map(Value::I64)
-                        .map_err(TokenError::from)
-                }?
+                    parse(n.trim_end_matches('i'), Value::I64)
+                }
+                .map_err(ParseError::from)
+                .map_err(Some)?
             }
             [b'\'', .., b'\''] => {
                 let char = &value[1..value.len() - 1];
 
                 if char.len() != 1 {
-                    Err(TokenError::InvalidCharLength)?;
+                    Err(Some(TokenError::InvalidCharLength.into()))?;
                 }
 
                 Value::Char(char.chars().next().unwrap())
             }
-            [b'\'', ..] => Err(TokenError::InvalidCharLength)?,
+            [b'\'', ..] => Err(Some(TokenError::InvalidCharLength.into()))?,
             [b'\"', .., b'\"'] => Value::String(value[1..value.len() - 1].to_string()),
             _ if value == "true" => true.into(),
             _ if value == "false" => false.into(),
-            _ => return Err(ParseError::NotALiteral),
+            _ => return Err(None),
         }))
     }
 }
 
-pub fn parse_float(n: &str) -> Result<Value, ParseFloatError> {
+pub fn parse_float(n: &str) -> Result<Value, TokenError> {
     #[allow(clippy::option_if_let_else)]
     if let Some(f) = n.strip_suffix('f') {
-        f.parse().map(Value::F32)
+        parse(f, Value::F32)
     } else {
-        n.trim_end_matches('d').parse().map(Value::F64)
+        parse(n.trim_end_matches('d'), Value::F64)
     }
 }
 
