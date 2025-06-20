@@ -84,10 +84,6 @@ impl Keyword {
         Self::Expression(Expression::Match)
     }
 
-    pub const fn void_() -> Self {
-        Self::Expression(Expression::Void)
-    }
-
     pub const fn return_() -> Self {
         Self::ControlFlow(ControlFlow::Return)
     }
@@ -126,8 +122,6 @@ pub enum Expression {
     While,
     For,
     Match,
-
-    Void,
 }
 
 #[derive(Debug, Clone, Copy, EnumString, Display, PartialEq, Eq)]

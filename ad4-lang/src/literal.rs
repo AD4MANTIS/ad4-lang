@@ -55,8 +55,9 @@ impl FromStr for Literal {
             }
             [b'\'', ..] => Err(Some(TokenError::InvalidCharLength.into()))?,
             [b'\"', .., b'\"'] => Value::String(value[1..value.len() - 1].to_string()),
-            _ if value == "true" => true.into(),
-            _ if value == "false" => false.into(),
+            b"true" => true.into(),
+            b"false" => false.into(),
+            b"void" => Value::Void,
             _ => return Err(None),
         }))
     }
