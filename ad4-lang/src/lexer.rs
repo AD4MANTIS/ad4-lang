@@ -2,6 +2,7 @@ use strum::IntoEnumIterator;
 
 use crate::{Operator, SEMICOLON, Token, TokenError, literal::parse_float};
 
+#[derive(Debug)]
 pub struct Lexer {
     tokens: Vec<Token>,
 }

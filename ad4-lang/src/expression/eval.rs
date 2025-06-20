@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Debug};
 
-use crate::{Operator, Value, Variable};
+use crate::{Operator, Value, Variable, expression::loops};
 
 use super::{Block, Expression, If};
 
@@ -61,6 +61,7 @@ impl Eval for Expression {
             }
             Self::Block(block) => block.eval(variables),
             Self::If(r#if) => r#if.eval(variables),
+            Self::While(r#while) => r#while.eval(variables),
         }
     }
 }
@@ -108,5 +109,15 @@ impl Eval for If {
         let block = check_if_conditions(self, variables)?;
 
         block.map_or(Ok(Value::Void), |block| block.eval(variables))
+    }
+}
+
+impl Eval for loops::While {
+    fn eval(&self, variables: &mut HashMap<Variable, Value>) -> Result<Value, EvalError> {
+        while self.condition.eval(variables)? == Value::Bool(true) {
+            self.block.eval(variables)?;
+        }
+
+        Ok(Value::Void)
     }
 }

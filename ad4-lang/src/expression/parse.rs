@@ -5,6 +5,7 @@ use std::{
 
 use crate::{
     Lexer, Literal, Operator, Token, Value,
+    expression::loops,
     keyword::{self, Keyword},
     lexer::TokenizeError,
     prelude::Statement,
@@ -97,6 +98,14 @@ impl Expression {
                         block: r#if.block,
                         elses,
                         r#else,
+                    })
+                }
+                keyword::Expression::While => {
+                    let condition = Box::new(Self::parse(lexer, 0)?);
+
+                    Self::While(loops::While {
+                        condition,
+                        block: Block::parse(lexer, Operator::OpeningCurlyBrace)?,
                     })
                 }
                 _ => todo!(),

@@ -199,3 +199,16 @@ mod if_else {
         Ok(())
     }
 }
+
+mod loops {
+    expr_cases! {
+        normal_while: "while true { }" => "while true { }",
+        iterating_while: "while a < 5 { a = a + 1 }" => "while (< a 5) { (= a (+ a 1)) }"
+        // todo
+        //         while_with_result: "while a < 10 { if a == 5 { break 42; } }" => "while (< a 10) {
+        //     if (== a 5) {
+        //     break 42;
+        //     }
+        // }"
+    }
+}

@@ -8,6 +8,7 @@ use crate::{Block, Literal, Operator, Variable};
 
 mod eval;
 mod ifs;
+mod loops;
 mod parse;
 
 #[cfg(test)]
@@ -24,6 +25,7 @@ pub enum Expression {
     },
     Block(Block),
     If(If),
+    While(loops::While),
 }
 
 impl Expression {
@@ -56,6 +58,7 @@ impl Display for Expression {
             Self::Operation { operator, lhs, rhs } => write!(f, "({operator} {lhs} {rhs})"),
             Self::Block(block) => write!(f, "{block}"),
             Self::If(r#if) => write!(f, "{if}"),
+            Self::While(r#while) => write!(f, "{while}"),
         }
     }
 }

@@ -3,8 +3,9 @@ use std::{collections::HashMap, fmt::Display};
 use thiserror::Error;
 
 use crate::{
-    EvalError, Expression, Keyword, Lexer, Literal, Operator, Token, Value, Variable, expression,
-    expression::Eval, keyword,
+    EvalError, Expression, Keyword, Lexer, Literal, Operator, Token, Value, Variable,
+    expression::{self, Eval},
+    keyword,
 };
 
 #[derive(Debug, Clone)]
@@ -27,6 +28,18 @@ pub enum ParseError {
     ExpectedVariableName { found: Option<Token> },
     #[error("Expected `{token}`{}", error_found_unexpected_extra_text(.found.as_ref()))]
     ExpectedToken { token: Token, found: Option<Token> },
+}
+
+macro_rules! consume_next_token {
+    ($lexer:expr, $token:expr) => {
+        let token = $lexer.next();
+        if Some($token) != token {
+            return Err(ParseError::ExpectedToken {
+                token: $token,
+                found: token,
+            });
+        };
+    };
 }
 
 impl Statement {
@@ -57,18 +70,6 @@ fn parse_declaration_statement(
     lexer: &mut Lexer,
     declaration: keyword::Declaration,
 ) -> Result<Statement, ParseError> {
-    macro_rules! consume_next_token {
-        ($token:expr) => {
-            let token = lexer.next();
-            if Some($token) != token {
-                return Err(ParseError::ExpectedToken {
-                    token: $token,
-                    found: token,
-                });
-            };
-        };
-    }
-
     Ok(match declaration {
         keyword::Declaration::Let => {
             lexer.next();
@@ -80,11 +81,11 @@ fn parse_declaration_statement(
                 }
             };
 
-            consume_next_token!(Token::Op(Operator::Assign));
+            consume_next_token!(lexer, Token::Op(Operator::Assign));
 
             let declaration = Statement::Declaration(var, Expression::parse(lexer, 0)?);
 
-            consume_next_token!(Token::Semicolon());
+            consume_next_token!(lexer, Token::Semicolon());
 
             declaration
         }
