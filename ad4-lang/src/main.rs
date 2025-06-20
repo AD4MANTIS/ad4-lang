@@ -5,6 +5,7 @@ use std::{
     io::{Write, stdin, stdout},
 };
 
+mod block;
 mod expression;
 mod keyword;
 mod lexer;

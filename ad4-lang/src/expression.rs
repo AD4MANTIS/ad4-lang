@@ -1,35 +1,17 @@
 use std::fmt::{Debug, Display, Formatter};
 
 pub use eval::{Eval, EvalError};
+pub use ifs::{If, SimpleIf};
 pub use parse::ParseError;
 
-use crate::{Literal, Operator, Statement, Variable};
+use crate::{Block, Literal, Operator, Variable};
 
 mod eval;
+mod ifs;
 mod parse;
 
 #[cfg(test)]
 mod test;
-
-#[derive(Debug, Clone)]
-pub struct Block {
-    pub statements: Vec<Statement>,
-    pub result_expr: Option<Box<Expression>>,
-}
-
-#[derive(Debug, Clone)]
-pub struct If {
-    pub condition: Box<Expression>,
-    pub block: Block,
-    pub elses: Vec<SimpleIf>,
-    pub r#else: Option<Block>,
-}
-
-#[derive(Debug, Clone)]
-pub struct SimpleIf {
-    pub condition: Box<Expression>,
-    pub block: Block,
-}
 
 #[derive(Debug, Clone)]
 pub enum Expression {
@@ -74,54 +56,6 @@ impl Display for Expression {
             Self::Operation { operator, lhs, rhs } => write!(f, "({operator} {lhs} {rhs})"),
             Self::Block(block) => write!(f, "{block}"),
             Self::If(r#if) => write!(f, "{if}"),
-        }
-    }
-}
-
-impl Display for If {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "if {} {}", self.condition, self.block)?;
-
-        for else_if in &self.elses {
-            write!(f, "\nelse {else_if}")?;
-        }
-
-        if let Some(r#else) = &self.r#else {
-            write!(f, "\nelse {else}")?;
-        }
-
-        Ok(())
-    }
-}
-
-impl Display for SimpleIf {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "if {} {}", self.condition, self.block)
-    }
-}
-
-impl Display for Block {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match (self.statements.as_slice(), &self.result_expr) {
-            ([], None) => write!(f, "{{ }}"),
-            ([], Some(expr)) => write!(f, "{{ {expr} }}"),
-            (_, _) => {
-                const INDENT: &str = "    ";
-
-                writeln!(f, "{{")?;
-
-                for statement in &self.statements {
-                    writeln!(f, "{INDENT}{statement};")?;
-                }
-
-                if let Some(expr) = &self.result_expr {
-                    write!(f, "{INDENT}{expr}",)?;
-                }
-
-                writeln!(f)?;
-
-                write!(f, "}}")
-            }
         }
     }
 }

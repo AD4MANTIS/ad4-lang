@@ -1,3 +1,4 @@
+pub use crate::block::Block;
 pub use crate::expression::{EvalError, Expression};
 pub use crate::keyword::Keyword;
 pub use crate::lexer::Lexer;
