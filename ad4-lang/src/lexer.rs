@@ -56,12 +56,13 @@ fn split_into_tokens(input: &str) -> impl Iterator<Item = &str> {
         reason = "Because the closure captures `current_literal_start` and we can't return a reference to this local variable"
     )]
     let split_input = input
-        .split(|char| match char {
+        .split_inclusive(|char| match char {
             '\'' | '"' => {
                 match current_literal_start {
                     Some(current_start) => {
                         if current_start == char {
                             current_literal_start = None;
+                            return true;
                         }
                     }
                     None => {
@@ -79,11 +80,14 @@ fn split_into_tokens(input: &str) -> impl Iterator<Item = &str> {
             ']' => {
                 bracket_depth -= 1;
 
-                false
+                true
             }
             _ => char.is_whitespace() && current_literal_start.is_none(),
         })
+        .map(str::trim)
+        .filter(|tokens| !tokens.is_empty())
         .flat_map(|parsing_str| split_special_operators(parsing_str))
+        .map(str::trim)
         .filter(|char| !char.is_empty())
         .collect::<Vec<_>>();
 
@@ -99,6 +103,10 @@ fn split_into_tokens(input: &str) -> impl Iterator<Item = &str> {
 }
 
 fn split_special_operators(parsing_str: &str) -> Box<dyn Iterator<Item = &str> + '_> {
+    if parsing_str.starts_with(['"', '\\']) {
+        return Box::new(std::iter::once(parsing_str));
+    }
+
     let tokens = std::iter::once(SEMICOLON).chain(Operator::iter().map(Operator::as_str));
 
     for token_str in tokens {
