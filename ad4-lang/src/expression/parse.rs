@@ -105,10 +105,10 @@ impl Expression {
                 keyword::Expression::While => {
                     let condition = Box::new(Self::parse(lexer, 0)?);
 
-                    Self::While(loops::While {
+                    return Ok(Self::While(loops::While {
                         condition,
                         block: Block::parse(lexer, Operator::OpeningCurlyBrace)?,
-                    })
+                    }));
                 }
                 _ => todo!(),
             },
@@ -200,7 +200,11 @@ impl Block {
 
             let statement = Statement::parse(lexer).map_err(Box::new)?;
 
-            if let Statement::Expr(expr) = statement {
+            if let Statement::Expr {
+                expr,
+                terminated: false,
+            } = statement
+            {
                 break Some(expr);
             }
 
@@ -242,5 +246,6 @@ fn expect_closing_bracket(lexer: &mut Lexer, bracket: Operator) -> Result<(), Pa
             found: found_closing_bracket,
         });
     }
+
     Ok(())
 }

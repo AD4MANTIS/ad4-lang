@@ -6,11 +6,12 @@ use crate::{
     EvalError, Expression, Keyword, Lexer, Literal, Operator, Token, Value, Variable,
     expression::{self, Eval},
     keyword,
+    token::SEMICOLON,
 };
 
 #[derive(Debug, Clone)]
 pub enum Statement {
-    Expr(Expression),
+    Expr { expr: Expression, terminated: bool },
     Declaration(Variable, Expression),
 }
 
@@ -48,14 +49,31 @@ impl Statement {
             Some(Token::Keyword(Keyword::Declaration(declaration))) => {
                 parse_declaration_statement(lexer, *declaration)?
             }
-            Some(_) => Self::Expr(Expression::parse(lexer, 0)?),
-            None => Self::Expr(Expression::Literal(Literal(Value::Void))),
+            Some(_) => {
+                let expr = Expression::parse(lexer, 0)?;
+
+                let terminated = if lexer.is_next(&Token::Semicolon()) {
+                    lexer.next();
+                    true
+                } else {
+                    // While loops are treated as expressions but can't return a value yet and don't need a semicolon
+                    matches!(&expr, Expression::While(_))
+                };
+
+                Self::Expr { expr, terminated }
+            }
+            None => Self::Expr {
+                expr: Expression::Literal(Literal(Value::Void)),
+                terminated: false,
+            },
         })
     }
 
     pub fn execute(&self, variables: &mut HashMap<Variable, Value>) -> Result<Value, EvalError> {
         match self {
-            Self::Expr(expression) => expression.eval(variables),
+            Self::Expr { expr, terminated } => expr
+                .eval(variables)
+                .map(|x| if *terminated { Value::Void } else { x }),
             Self::Declaration(variable, expression) => {
                 let value = expression.eval(variables)?;
                 variables.insert(variable.clone(), value);
@@ -96,7 +114,9 @@ fn parse_declaration_statement(
 impl Display for Statement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Expr(expression) => expression.fmt(f),
+            Self::Expr { expr, terminated } => {
+                write!(f, "{expr}{}", if *terminated { "" } else { SEMICOLON })
+            }
             Self::Declaration(variable, expression) => {
                 write!(f, "let {variable} = {expression}")
             }

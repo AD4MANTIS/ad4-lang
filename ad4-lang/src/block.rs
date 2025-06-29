@@ -24,9 +24,8 @@ impl Display for Block {
 
                 if let Some(expr) = &self.result_expr {
                     write!(f, "{INDENT}{expr}",)?;
+                    writeln!(f)?;
                 }
-
-                writeln!(f)?;
 
                 write!(f, "}}")
             }

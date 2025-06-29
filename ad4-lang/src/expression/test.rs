@@ -149,14 +149,23 @@ mod blocks {
         curly: "{ 1 }" => "{ 1 }" => 1,
         curly_no_space: "{1+2} + 3" => "(+ { (+ 1 2) } 3)" => 6,
         multiple_statements: "{
-        let x = 1;
-        let y = 2;
-        x + y
+            let x = 1;
+            let y = 2;
+            x + y
     }" => r"{
     let x = 1;
     let y = 2;
     (+ x y)
 }" => 3,
+        multiple_expressions: "{
+            let x = 1;
+            x = x + 1;
+            x + x
+}" => r"{
+    let x = 1;
+    (= x (+ x 1));
+    (+ x x)
+}" => 4,
         empty_block: "{}" => "{ }" => (),
     }
 
@@ -212,26 +221,26 @@ mod loops {
         normal_while: "while true { }" => "while true { }",
         iterating_while: "while a < 5 { a = a + 1 }" => "while (< a 5) { (= a (+ a 1)) }",
         fibonacci_while: r"{
-    let a = 0;
-    let b = 1;
+            let a = 0;
+            let b = 1;
 
-    while b < 50 {
-        let temp = a + b;
-        a = b;
-        b = temp;
-    }
+            while b < 50 {
+                let temp = a + b;
+                a = b;
+                b = temp;
+            }
 
-    b
+            b
 }" => r"{
     let a = 0;
     let b = 1;
     while (< b 50) {
     let temp = (+ a b);
     (= a b);
-    (= b temp);    
-    }
+    (= b temp);
+};
     b
-}",
+}" => 55,
         // todo
         // while_with_result: "while a < 10 { if a == 5 { break 42; } }" => "while (< a 10) {
         //     if (== a 5) {
