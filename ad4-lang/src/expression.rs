@@ -3,6 +3,7 @@ use std::fmt::{Debug, Display, Formatter};
 pub use eval::{Eval, EvalError};
 pub use ifs::{If, SimpleIf};
 pub use parse::ParseError;
+pub use vec::VecExpression;
 
 use crate::{Block, Literal, Operator, Variable};
 
@@ -10,6 +11,7 @@ mod eval;
 mod ifs;
 mod loops;
 mod parse;
+mod vec;
 
 #[cfg(test)]
 mod test;
@@ -24,6 +26,7 @@ pub enum Expression {
         rhs: Box<Expression>,
     },
     Block(Block),
+    Vec(VecExpression),
     If(If),
     While(loops::While),
 }
@@ -57,6 +60,7 @@ impl Display for Expression {
             Self::Variable(var) => write!(f, "{}", var.name),
             Self::Operation { operator, lhs, rhs } => write!(f, "({operator} {lhs} {rhs})"),
             Self::Block(block) => write!(f, "{block}"),
+            Self::Vec(vec) => write!(f, "{vec}"),
             Self::If(r#if) => write!(f, "{if}"),
             Self::While(r#while) => write!(f, "{while}"),
         }

@@ -49,6 +49,7 @@ fn tokenize(input: &str) -> impl Iterator<Item = Result<Token, TokenError>> {
 
 fn split_into_tokens(input: &str) -> impl Iterator<Item = &str> {
     let mut current_literal_start: Option<char> = None;
+    let mut bracket_depth = 0;
 
     #[allow(
         clippy::needless_collect,
@@ -70,6 +71,16 @@ fn split_into_tokens(input: &str) -> impl Iterator<Item = &str> {
 
                 false
             }
+            '[' => {
+                bracket_depth += 1;
+
+                false
+            }
+            ']' => {
+                bracket_depth -= 1;
+
+                false
+            }
             _ => char.is_whitespace() && current_literal_start.is_none(),
         })
         .flat_map(|parsing_str| split_special_operators(parsing_str))
@@ -82,10 +93,12 @@ fn split_into_tokens(input: &str) -> impl Iterator<Item = &str> {
         current_literal_start.unwrap_or_default()
     );
 
+    assert!(bracket_depth == 0, "Expected {bracket_depth} `]`");
+
     split_input.into_iter()
 }
 
-fn split_special_operators(parsing_str: &str) -> Vec<&str> {
+fn split_special_operators(parsing_str: &str) -> Box<dyn Iterator<Item = &str> + '_> {
     let tokens = std::iter::once(SEMICOLON).chain(Operator::iter().map(Operator::as_str));
 
     for token_str in tokens {
@@ -97,17 +110,18 @@ fn split_special_operators(parsing_str: &str) -> Vec<&str> {
             continue;
         }
 
-        return [
-            split_special_operators(&parsing_str[..op_pos]),
-            vec![token_str],
-            split_special_operators(&parsing_str[(op_pos + token_str.len())..]),
-        ]
-        .into_iter()
-        .flatten()
-        .collect();
+        return Box::new(
+            [
+                split_special_operators(&parsing_str[..op_pos]),
+                Box::new(std::iter::once(token_str)),
+                split_special_operators(&parsing_str[(op_pos + token_str.len())..]),
+            ]
+            .into_iter()
+            .flatten(),
+        );
     }
 
-    vec![parsing_str]
+    Box::new(std::iter::once(parsing_str))
 }
 
 #[cfg(test)]

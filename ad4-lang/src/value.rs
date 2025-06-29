@@ -23,6 +23,10 @@ pub enum Value {
     F32(#[from] f32),
     #[strum(to_string = "{0}")]
     Bool(#[from] bool),
+
+    #[strum(to_string = "{0:?}")]
+    Vec(#[from] Vec<Value>),
+
     #[strum(to_string = "void")]
     Void,
 }
@@ -117,7 +121,8 @@ impl_eq!(
     U32,
     F64,
     F32,
-    Bool & {
+    Bool,
+    Vec, & {
     (Self::Void, Self::Void) => true,
     (Self::I64(lhs), Self::U32(rhs)) => *lhs == i64::from(*rhs),
     (Self::U32(lhs), Self::I64(rhs)) => i64::from(*lhs) == *rhs,

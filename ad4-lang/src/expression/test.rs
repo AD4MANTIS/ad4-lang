@@ -75,6 +75,8 @@ mod literals {
         double_no_fraction_implicit: "1." => "1" => 1.0,
         boolean_true: "true" => "true" => true,
         boolean_false: "false" => "false" => false,
+        vector: "[1]" => "[1]" => vec![1.into()],
+        vector_2: "[1, 2, 3]" => "[1, 2, 3]" => vec![1.into(), 2.into(), 3.into()],
     }
 }
 
@@ -205,7 +207,7 @@ mod loops {
         normal_while: "while true { }" => "while true { }",
         iterating_while: "while a < 5 { a = a + 1 }" => "while (< a 5) { (= a (+ a 1)) }"
         // todo
-        //         while_with_result: "while a < 10 { if a == 5 { break 42; } }" => "while (< a 10) {
+        // while_with_result: "while a < 10 { if a == 5 { break 42; } }" => "while (< a 10) {
         //     if (== a 5) {
         //     break 42;
         //     }

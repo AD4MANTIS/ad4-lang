@@ -54,12 +54,20 @@ impl Eval for Expression {
                     Op::OpeningBracket
                     | Op::ClosingBracket
                     | Op::OpeningCurlyBrace
-                    | Op::ClosingCurlyBrace => Err(EvalError::String(format!(
+                    | Op::ClosingCurlyBrace
+                    | Operator::OpeningSquareBracket
+                    | Operator::ClosingSquareBracket => Err(EvalError::String(format!(
                         "Expected Expression, found Operator '{operator}'"
                     ))),
                 }
             }
             Self::Block(block) => block.eval(variables),
+            Self::Vec(vec) => Ok(Value::Vec(
+                vec.items
+                    .iter()
+                    .map(|item_expr| item_expr.eval(variables))
+                    .collect::<Result<_, _>>()?,
+            )),
             Self::If(r#if) => r#if.eval(variables),
             Self::While(r#while) => r#while.eval(variables),
         }

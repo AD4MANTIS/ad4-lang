@@ -20,6 +20,8 @@ pub enum Operator {
     ClosingBracket,
     OpeningCurlyBrace,
     ClosingCurlyBrace,
+    OpeningSquareBracket,
+    ClosingSquareBracket,
     Dot,
 }
 
@@ -42,6 +44,8 @@ impl From<Operator> for &'static str {
             Op::ClosingBracket => ")",
             Op::OpeningCurlyBrace => "{",
             Op::ClosingCurlyBrace => "}",
+            Op::OpeningSquareBracket => "[",
+            Operator::ClosingSquareBracket => "]",
             Op::Dot => ".",
         }
     }
@@ -67,8 +71,8 @@ impl Operator {
             Self::Div | Self::Mul => (12, 13),
             Self::Assign => (2, 1),
             Self::Eq | Self::Neq | Self::Lt | Self::Leq | Self::Gt | Self::Geq => (5, 6),
-            Self::OpeningBracket | Self::OpeningCurlyBrace => (0, 1),
-            Self::ClosingBracket | Self::ClosingCurlyBrace => (0, 0),
+            Self::OpeningBracket | Self::OpeningCurlyBrace | Self::OpeningSquareBracket => (0, 1),
+            Self::ClosingBracket | Self::ClosingCurlyBrace | Self::ClosingSquareBracket => (0, 0),
             Self::Dot => (20, 21),
         }
     }
@@ -77,6 +81,7 @@ impl Operator {
         Some(match self {
             Self::OpeningBracket => Self::ClosingBracket,
             Self::OpeningCurlyBrace => Self::ClosingCurlyBrace,
+            Self::OpeningSquareBracket => Self::ClosingSquareBracket,
             _ => return None,
         })
     }

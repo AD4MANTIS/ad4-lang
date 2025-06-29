@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     Lexer, Literal, Operator, Token, Value,
-    expression::loops,
+    expression::{VecExpression, loops},
     keyword::{self, Keyword},
     lexer::TokenizeError,
     prelude::Statement,
@@ -119,6 +119,21 @@ impl Expression {
                 expect_closing_bracket(lexer, bracket)?;
 
                 expr
+            }
+            Token::Op(square_bracket @ Operator::OpeningSquareBracket) => {
+                let mut items = vec![];
+
+                while lexer.peek()
+                    != Some(&Token::Op(
+                        square_bracket
+                            .get_closing_bracket()
+                            .expect("Should be ClosingSquareBracket"),
+                    ))
+                {
+                    items.push(Self::parse(lexer, square_bracket.infix_binding_power().1)?);
+                }
+
+                Self::Vec(VecExpression { items })
             }
             Token::Op(brace @ Operator::OpeningCurlyBrace) => {
                 Self::Block(Block::parse(lexer, brace)?)

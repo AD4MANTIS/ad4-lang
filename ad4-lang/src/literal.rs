@@ -64,12 +64,10 @@ impl FromStr for Literal {
 }
 
 pub fn parse_float(n: &str) -> Result<Value, TokenError> {
-    #[allow(clippy::option_if_let_else)]
-    if let Some(f) = n.strip_suffix('f') {
-        parse(f, Value::F32)
-    } else {
-        parse(n.trim_end_matches('d'), Value::F64)
-    }
+    n.strip_suffix('f').map_or_else(
+        || parse(n.trim_end_matches('d'), Value::F64),
+        |f| parse(f, Value::F32),
+    )
 }
 
 impl Display for Literal {
