@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use crate::Expression;
+use crate::{Expression, block::INDENT};
 
 #[derive(Debug, Clone)]
 pub struct VecExpression {
@@ -16,10 +16,10 @@ impl Display for VecExpression {
                 writeln!(f, "[")?;
 
                 for item in &self.items {
-                    writeln!(f, "{item},")?;
+                    writeln!(f, "{INDENT}{item},")?;
                 }
 
-                writeln!(f, "]")
+                write!(f, "]")
             }
         }
     }

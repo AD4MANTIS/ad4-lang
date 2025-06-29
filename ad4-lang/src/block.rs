@@ -2,6 +2,8 @@ use std::fmt::{Display, Formatter};
 
 use crate::{Expression, Statement};
 
+pub const INDENT: &str = "    ";
+
 #[derive(Debug, Clone)]
 pub struct Block {
     pub statements: Vec<Statement>,
@@ -14,8 +16,6 @@ impl Display for Block {
             ([], None) => write!(f, "{{ }}"),
             ([], Some(expr)) => write!(f, "{{ {expr} }}"),
             (_, _) => {
-                const INDENT: &str = "    ";
-
                 writeln!(f, "{{")?;
 
                 for statement in &self.statements {

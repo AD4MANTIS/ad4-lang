@@ -130,6 +130,15 @@ impl Expression {
                             .expect("Should be ClosingSquareBracket"),
                     ))
                 {
+                    if !items.is_empty() {
+                        match lexer.next() {
+                            Some(Token::Op(Operator::Comma)) => {}
+                            Some(token) => {
+                                return Err(ParseError::expected(Operator::Comma, "", token));
+                            }
+                            None => return Err(ParseError::UnexpectedEndOfExpression),
+                        }
+                    }
                     items.push(Self::parse(lexer, square_bracket.infix_binding_power().1)?);
                 }
 

@@ -27,12 +27,12 @@ fn test_expr(input: &str, expected: &str, result: Option<Value>) {
     let expr = parse_test_expression(input, expected);
 
     if let Some(result) = result {
-        if let Ok(eval_result) = expr.eval(
-            &mut [("a", 1i64.into()), ("b", 2i64.into()), ("c", 3i64.into())]
-                .into_iter()
-                .map(|x| (Variable::new(x.0.to_string()), x.1))
-                .collect::<HashMap<_, _>>(),
-        ) {
+        let variables = &mut [("a", 1i64.into()), ("b", 2i64.into()), ("c", 3i64.into())]
+            .into_iter()
+            .map(|x| (Variable::new(x.0.to_string()), x.1))
+            .collect::<HashMap<_, _>>();
+
+        if let Ok(eval_result) = expr.eval(variables) {
             assert_eq!(eval_result, result);
         }
     }
@@ -76,7 +76,11 @@ mod literals {
         boolean_true: "true" => "true" => true,
         boolean_false: "false" => "false" => false,
         vector: "[1]" => "[1]" => vec![1.into()],
-        vector_2: "[1, 2, 3]" => "[1, 2, 3]" => vec![1.into(), 2.into(), 3.into()],
+        vector_2: "[1, 2, 3]" => r"[
+    1,
+    2,
+    3,
+]" => vec![1.into(), 2.into(), 3.into()],
     }
 }
 
@@ -205,7 +209,28 @@ mod if_else {
 mod loops {
     expr_cases! {
         normal_while: "while true { }" => "while true { }",
-        iterating_while: "while a < 5 { a = a + 1 }" => "while (< a 5) { (= a (+ a 1)) }"
+        iterating_while: "while a < 5 { a = a + 1 }" => "while (< a 5) { (= a (+ a 1)) }",
+        fibonacci_while: r"{
+    let a = 0;
+    let b = 1;
+
+    while b < 50 {
+        let temp = a + b;
+        a = b;
+        b = temp;
+    }
+
+    b
+}" => r"{
+    let a = 0;
+    let b = 1;
+    while (< b 50) {
+    let temp = (+ a b);
+    (= a b);
+    (= b temp);    
+    }
+    b
+}",
         // todo
         // while_with_result: "while a < 10 { if a == 5 { break 42; } }" => "while (< a 10) {
         //     if (== a 5) {

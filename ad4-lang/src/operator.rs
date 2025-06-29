@@ -23,6 +23,7 @@ pub enum Operator {
     OpeningSquareBracket,
     ClosingSquareBracket,
     Dot,
+    Comma,
 }
 
 impl From<Operator> for &'static str {
@@ -47,6 +48,7 @@ impl From<Operator> for &'static str {
             Op::OpeningSquareBracket => "[",
             Operator::ClosingSquareBracket => "]",
             Op::Dot => ".",
+            Operator::Comma => ",",
         }
     }
 }
@@ -72,7 +74,10 @@ impl Operator {
             Self::Assign => (2, 1),
             Self::Eq | Self::Neq | Self::Lt | Self::Leq | Self::Gt | Self::Geq => (5, 6),
             Self::OpeningBracket | Self::OpeningCurlyBrace | Self::OpeningSquareBracket => (0, 1),
-            Self::ClosingBracket | Self::ClosingCurlyBrace | Self::ClosingSquareBracket => (0, 0),
+            Self::ClosingBracket
+            | Self::ClosingCurlyBrace
+            | Self::ClosingSquareBracket
+            | Self::Comma => (0, 0),
             Self::Dot => (20, 21),
         }
     }
