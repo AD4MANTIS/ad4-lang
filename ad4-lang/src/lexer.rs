@@ -57,14 +57,17 @@ fn split_into_tokens(input: &str) -> impl Iterator<Item = &str> {
     let split_input = input
         .split(|char| match char {
             '\'' | '"' => {
-                if let Some(current_start) = current_literal_start.take() {
-                    assert_eq!(
-                        current_start, char,
-                        "Expected matching closing delimiter {current_start}, found {char}"
-                    );
-                } else {
-                    current_literal_start = Some(char);
+                match current_literal_start {
+                    Some(current_start) => {
+                        if current_start == char {
+                            current_literal_start = None;
+                        }
+                    }
+                    None => {
+                        current_literal_start = Some(char);
+                    }
                 }
+
                 false
             }
             _ => char.is_whitespace() && current_literal_start.is_none(),
