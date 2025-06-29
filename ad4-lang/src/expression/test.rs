@@ -81,6 +81,7 @@ mod literals {
     2,
     3,
 ]" => vec![1.into(), 2.into(), 3.into()],
+        vector_trailing_comma: "[1,]" => "[1]" => vec![1.into()],
     }
 }
 

@@ -56,8 +56,7 @@ impl Eval for Expression {
                     | Op::OpeningCurlyBrace
                     | Op::ClosingCurlyBrace
                     | Op::OpeningSquareBracket
-                    | Op::ClosingSquareBracket
-                    | Op::Comma => Err(EvalError::String(format!(
+                    | Op::ClosingSquareBracket => Err(EvalError::String(format!(
                         "Expected Expression, found Operator '{operator}'"
                     ))),
                 }

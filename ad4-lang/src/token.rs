@@ -7,6 +7,7 @@ use crate::{Keyword, Literal, Operator, Variable, literal::ParseError};
 use strum::{Display, IntoEnumIterator};
 
 pub const SEMICOLON: &str = ";";
+pub const COMMA: &str = ",";
 
 #[derive(Debug, Clone, Display, PartialEq)]
 pub enum Token {
@@ -20,6 +21,8 @@ pub enum Token {
     Variable(Variable),
     #[strum(to_string = "{SEMICOLON}")]
     Semicolon(),
+    #[strum(to_string = "{COMMA}")]
+    Comma(),
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -37,8 +40,10 @@ impl FromStr for Token {
     type Err = TokenError;
 
     fn from_str(token: &str) -> Result<Self, Self::Err> {
-        if token == SEMICOLON {
-            return Ok(Self::Semicolon());
+        match token {
+            SEMICOLON => return Ok(Self::Semicolon()),
+            COMMA => return Ok(Self::Comma()),
+            _ => {}
         }
 
         if let Ok(keyword) = Keyword::from_str(token) {

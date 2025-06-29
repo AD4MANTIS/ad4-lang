@@ -1,6 +1,6 @@
 use strum::IntoEnumIterator;
 
-use crate::{Operator, SEMICOLON, Token, TokenError, literal::parse_float};
+use crate::{COMMA, Operator, SEMICOLON, Token, TokenError, literal::parse_float};
 
 #[derive(Debug)]
 pub struct Lexer {
@@ -107,7 +107,9 @@ fn split_special_operators(parsing_str: &str) -> Box<dyn Iterator<Item = &str> +
         return Box::new(std::iter::once(parsing_str));
     }
 
-    let tokens = std::iter::once(SEMICOLON).chain(Operator::iter().map(Operator::as_str));
+    let tokens = [SEMICOLON, COMMA]
+        .into_iter()
+        .chain(Operator::iter().map(Operator::as_str));
 
     for token_str in tokens {
         let Some(op_pos) = parsing_str.find(token_str) else {
@@ -139,7 +141,10 @@ mod tokenize_test {
     use crate::{Keyword, Operator};
 
     fn test_tokenize(input: &str, expected: &[Token]) {
-        let expr = tokenize(input).collect::<Result<Vec<_>, _>>().unwrap();
+        let expr = tokenize(input)
+            .collect::<Result<Vec<_>, _>>()
+            .expect("Test should tokenize");
+
         assert_eq!(
             expr, expected,
             "Input: {input}\nExpected: {expected:#?}\nActual: {expr:#?}"
@@ -218,6 +223,22 @@ mod tokenize_test {
     #[test]
     fn semicolon() {
         test_tokenize(";", &[Token::Semicolon()]);
+    }
+
+    #[test]
+    fn vector() {
+        test_tokenize(
+            "[1, 2, 3]",
+            &[
+                Token::Op(Operator::OpeningSquareBracket),
+                Token::literal(1.into()),
+                Token::Comma(),
+                Token::literal(2.into()),
+                Token::Comma(),
+                Token::literal(3.into()),
+                Token::Op(Operator::ClosingSquareBracket),
+            ],
+        );
     }
 
     #[test]

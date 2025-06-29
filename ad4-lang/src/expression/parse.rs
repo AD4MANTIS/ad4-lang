@@ -38,8 +38,8 @@ pub enum ParseError {
         expected: Operator,
         found: Token,
     },
-    #[error("Unexpected end of expression")]
-    UnexpectedEndOfExpression,
+    #[error("Unexpected end of expression, found {found}")]
+    UnexpectedEndOfExpression { found: Token },
     #[error(transparent)]
     Statement(#[from] Box<statement::ParseError>),
 }
@@ -70,7 +70,9 @@ impl FromStr for Expression {
 impl Expression {
     pub fn parse(lexer: &mut Lexer, binding_power_lhs: u32) -> Result<Self, ParseError> {
         let mut lhs = match lexer.next().ok_or(ParseError::NoTokensLeft)? {
-            Token::Semicolon() => return Err(ParseError::UnexpectedEndOfExpression),
+            comma @ (Token::Semicolon() | Token::Comma()) => {
+                return Err(ParseError::UnexpectedEndOfExpression { found: comma });
+            }
             Token::Variable(v) => Self::Variable(v),
             Token::Literal(literal) => Self::Literal(literal),
             Token::Keyword(Keyword::Expression(keyword)) => match keyword {
@@ -130,17 +132,14 @@ impl Expression {
                             .expect("Should be ClosingSquareBracket"),
                     ))
                 {
-                    if !items.is_empty() {
-                        match lexer.next() {
-                            Some(Token::Op(Operator::Comma)) => {}
-                            Some(token) => {
-                                return Err(ParseError::expected(Operator::Comma, "", token));
-                            }
-                            None => return Err(ParseError::UnexpectedEndOfExpression),
-                        }
-                    }
                     items.push(Self::parse(lexer, square_bracket.infix_binding_power().1)?);
+
+                    if matches!(lexer.peek(), Some(Token::Comma())) {
+                        lexer.next();
+                    }
                 }
+
+                expect_closing_bracket(lexer, square_bracket)?;
 
                 Self::Vec(VecExpression { items })
             }
@@ -161,7 +160,7 @@ impl Expression {
         loop {
             let operator = match lexer.peek() {
                 Some(Token::Op(operator)) => *operator,
-                Some(Token::Semicolon()) | None => {
+                Some(Token::Semicolon() | Token::Comma()) | None => {
                     break;
                 }
                 Some(token) => {

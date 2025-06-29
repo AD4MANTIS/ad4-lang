@@ -5,6 +5,6 @@ pub use crate::lexer::Lexer;
 pub use crate::literal::Literal;
 pub use crate::operator::Operator;
 pub use crate::statement::Statement;
-pub use crate::token::{SEMICOLON, Token, TokenError};
+pub use crate::token::{COMMA, SEMICOLON, Token, TokenError};
 pub use crate::value::Value;
 pub use crate::variable::Variable;
