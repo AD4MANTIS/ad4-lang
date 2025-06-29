@@ -1,0 +1,10 @@
+let a = 0;
+let b = 1;
+
+while b < 50 {
+    let temp = a + b;
+    a = b;
+    b = temp;
+}
+
+b
